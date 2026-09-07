@@ -10,11 +10,15 @@ export class ProjectController {
       district,
       sector,
       work_type,
+      agency,
       risk_level,
       status,
+      min_risk,
+      max_risk,
       search,
       sort_by = 'risk_score',
       sort_order = 'desc',
+      order = 'desc',
       page = '1',
       limit = '50'
     } = req.query;
@@ -34,12 +38,21 @@ export class ProjectController {
     if (work_type && typeof work_type === 'string') {
       projects = projects.filter(p => p.work_type.toLowerCase() === work_type.toLowerCase());
     }
+    if (agency && typeof agency === 'string') {
+      projects = projects.filter(p => p.implementing_agency.toLowerCase().includes(agency.toLowerCase()));
+    }
     if (risk_level && typeof risk_level === 'string') {
       const levels = risk_level.toUpperCase().split(',');
       projects = projects.filter(p => levels.includes(p.risk_level));
     }
     if (status && typeof status === 'string') {
       projects = projects.filter(p => p.status.toLowerCase() === status.toLowerCase());
+    }
+    if (min_risk) {
+      projects = projects.filter(p => p.risk_score >= Number(min_risk));
+    }
+    if (max_risk) {
+      projects = projects.filter(p => p.risk_score <= Number(max_risk));
     }
     if (search && typeof search === 'string') {
       const q = search.toLowerCase();
@@ -52,6 +65,8 @@ export class ProjectController {
       );
     }
 
+    const direction = sort_order || order;
+
     // Sorting
     projects.sort((a, b) => {
       let valA: any = (a as any)[sort_by as string];
@@ -60,17 +75,17 @@ export class ProjectController {
       if (typeof valA === 'string') {
         valA = valA.toLowerCase();
         valB = (valB || '').toLowerCase();
-        return sort_order === 'asc' ? valA.localeCompare(valB) : valB.localeCompare(valA);
+        return direction === 'asc' ? valA.localeCompare(valB) : valB.localeCompare(valA);
       }
 
       valA = Number(valA) || 0;
       valB = Number(valB) || 0;
-      return sort_order === 'asc' ? valA - valB : valB - valA;
+      return direction === 'asc' ? valA - valB : valB - valA;
     });
 
     // Pagination
-    const pageNum = Math.max(1, parseInt(page as string) || 1);
-    const limitNum = Math.max(1, parseInt(limit as string) || 50);
+    const pageNum = Math.max(1, parseInt(page as string, 10) || 1);
+    const limitNum = Math.max(1, parseInt(limit as string, 10) || 50);
     const total = projects.length;
     const paginated = projects.slice((pageNum - 1) * limitNum, pageNum * limitNum);
 
@@ -84,8 +99,13 @@ export class ProjectController {
     });
   }
 
+  // Alias for compatibility
+  public static getAllProjects(req: Request, res: Response): void {
+    return ProjectController.getProjects(req, res);
+  }
+
   public static getProjectById(req: Request, res: Response): void {
-    const { id } = req.params;
+    const id = String(req.params.id);
     const project = StorageService.getProjectById(id);
 
     if (!project) {
@@ -97,7 +117,7 @@ export class ProjectController {
   }
 
   public static getProjectRisk(req: Request, res: Response): void {
-    const { id } = req.params;
+    const id = String(req.params.id);
     const analysis = StorageService.getRiskAnalysisById(id);
 
     if (!analysis) {
@@ -109,7 +129,7 @@ export class ProjectController {
   }
 
   public static getProjectExplanation(req: Request, res: Response): void {
-    const { id } = req.params;
+    const id = String(req.params.id);
     const project = StorageService.getProjectById(id);
 
     if (!project) {
@@ -133,7 +153,7 @@ export class ProjectController {
   }
 
   public static getProjectSimilar(req: Request, res: Response): void {
-    const { id } = req.params;
+    const id = String(req.params.id);
     const project = StorageService.getProjectById(id);
 
     if (!project) {
@@ -175,7 +195,7 @@ export class ProjectController {
       const validationErrors: Array<{ row: number; project_id?: string; error: string }> = [];
 
       records.forEach((row: any, idx: number) => {
-        const rowNum = idx + 2; // account for header
+        const rowNum = idx + 2;
         if (!row.project_id || !row.work_name) {
           validationErrors.push({ row: rowNum, error: 'Missing required field: project_id or work_name' });
           return;
@@ -193,7 +213,7 @@ export class ProjectController {
         const lat = parseFloat(row.latitude) || 20.5937;
         const lng = parseFloat(row.longitude) || 78.9629;
         const qty = parseFloat(row.quantity) || 1;
-        const beneficiaries = parseInt(row.beneficiary_count) || 1000;
+        const beneficiaries = parseInt(row.beneficiary_count, 10) || 1000;
 
         validProjects.push({
           project_id: row.project_id.trim(),
@@ -232,7 +252,6 @@ export class ProjectController {
         return;
       }
 
-      // Replace or append
       const append = req.body.mode === 'append';
       StorageService.addProjects(validProjects, append);
 

@@ -4,7 +4,7 @@ import { GeoSpatialService } from './geoSpatial.service.js';
 export class NlpSimilarityService {
   private static stopWords = new Set([
     'and', 'or', 'the', 'a', 'an', 'in', 'at', 'of', 'for', 'to', 'from', 'with', 'by',
-    'on', 'under', 'scheme', 'mplad', 'mplads'
+    'on', 'under', 'scheme', 'mplad', 'mplads', 'work', 'project', 'construction', 'installation'
   ]);
 
   public static normalizeText(text: string): string {
@@ -40,7 +40,7 @@ export class NlpSimilarityService {
   }
 
   /**
-   * Computes Hybrid Cosine & Token Jaccard Similarity between two texts
+   * Computes Hybrid Cosine & Token Jaccard Similarity between two texts (0 to 100)
    */
   public static calculateCosineSimilarity(text1: string, text2: string): number {
     const tokens1 = this.tokenize(text1);
@@ -83,7 +83,14 @@ export class NlpSimilarityService {
   }
 
   /**
-   * Finds all duplicate or overlapping candidate projects across the dataset
+   * Finds duplicate candidate projects by combining:
+   * 1. Lexical and semantic text similarity
+   * 2. Work type and sector alignment
+   * 3. Administrative district co-location
+   * 4. Geographic Haversine distance
+   *
+   * Crucially: Does NOT flag projects with similar text if they are in different
+   * districts or far apart (> 15 km), preventing generic titles from false triggers.
    */
   public static findDuplicateMatches(
     project: Project,
@@ -104,22 +111,44 @@ export class NlpSimilarityService {
       );
 
       const isSameType = project.work_type === other.work_type;
+      const isSameSector = project.sector === other.sector;
+      const isSameDistrict = project.district.trim().toLowerCase() === other.district.trim().toLowerCase();
+
+      // Rule: If projects are in completely different districts AND more than 15 km apart,
+      // they cannot be duplicate candidates regardless of text similarity.
+      if (!isSameDistrict && distance > 15.0) {
+        continue;
+      }
+
+      // Compute text similarity
       const similarity = this.calculateCosineSimilarity(project.work_name, other.work_name);
 
+      // Must meet minimum similarity threshold
+      if (similarity < similarityThreshold) {
+        continue;
+      }
+
       const reasons: string[] = [];
+      let indicator: DuplicateMatch['risk_indicator'] | null = null;
 
-      if (similarity >= similarityThreshold && distance <= distanceThresholdKm) {
-        let indicator: DuplicateMatch['risk_indicator'] = 'Potential Duplicate';
-        reasons.push(`High semantic similarity (${similarity}%) in project description`);
-        reasons.push(`Geographically proximate (${distance} km distance)`);
+      // Classify according to multi-dimensional criteria
+      if (similarity >= 75 && distance <= 2.5 && isSameType) {
+        indicator = 'Potential Duplicate';
+        reasons.push(`High lexical similarity (${similarity}%) for identical work type (${project.work_type})`);
+        reasons.push(`Located within ${distance} km in ${project.district}`);
+        if (isSameDistrict) reasons.push(`Same administrative district: ${project.district}`);
+      } else if (similarity >= 65 && distance <= distanceThresholdKm && (isSameType || isSameSector)) {
+        indicator = 'Overlapping Scope';
+        reasons.push(`Substantial scope overlap (${similarity}%) in ${project.work_type}`);
+        reasons.push(`Close geographic proximity (${distance} km distance)`);
+        if (isSameDistrict) reasons.push(`Co-located in district ${project.district}`);
+      } else if (similarity >= 60 && isSameDistrict && distance <= 12.0) {
+        indicator = 'Requires Verification';
+        reasons.push(`Moderate descriptive similarity (${similarity}%) within district ${project.district}`);
+        reasons.push(`Separated by ${distance} km`);
+      }
 
-        if (isSameType) {
-          reasons.push(`Identical work category: ${project.work_type}`);
-        }
-        if (project.district === other.district) {
-          reasons.push(`Same administrative district: ${project.district}`);
-        }
-
+      if (indicator) {
         matches.push({
           matched_project_id: other.project_id,
           matched_work_name: other.work_name,
@@ -130,21 +159,6 @@ export class NlpSimilarityService {
           distance_km: distance,
           risk_indicator: indicator,
           reasons
-        });
-      } else if (similarity >= 75 && distance <= 25.0) {
-        matches.push({
-          matched_project_id: other.project_id,
-          matched_work_name: other.work_name,
-          matched_district: other.district,
-          matched_agency: other.implementing_agency,
-          matched_sanctioned_amount: other.sanctioned_amount,
-          semantic_similarity: similarity,
-          distance_km: distance,
-          risk_indicator: 'Overlapping Scope',
-          reasons: [
-            `Strong scope overlap (${similarity}% text similarity)`,
-            `Located within ${distance} km in ${other.district}`
-          ]
         });
       }
     }

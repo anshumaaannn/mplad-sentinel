@@ -5,14 +5,15 @@ import { PeerBenchmarkingService, PeerGroupStats } from './peerBenchmarking.serv
 import { AgencyAnalyticsService, AgencyMetrics } from './agencyAnalytics.service.js';
 import { RiskScoringService } from './riskScoring.service.js';
 import * as path from 'path';
-import * as fs from 'fs';
 
 export interface DataQualitySummary {
   total_projects: number;
   valid_records: number;
+  invalid_records: number;
   records_requiring_review: number;
   missing_coordinates_count: number;
   missing_completion_dates_count: number;
+  missing_required_fields_count: number;
   data_integrity_score_pct: number;
   last_analyzed_at: string;
 }
@@ -69,7 +70,7 @@ export class StorageService {
 
   public static runFullAnalysis(): void {
     console.log(`[StorageService] Running Full Risk Intelligence Analysis on ${this.projects.length} projects...`);
-    
+
     // 1. Feature Engineering
     this.featuresMap = FeatureEngineeringService.extractAllFeatures(this.projects);
 
@@ -86,8 +87,8 @@ export class StorageService {
       const initialAnalysis = RiskScoringService.evaluateProject(
         p,
         feat,
-        this.peerGroups,
         this.projects,
+        this.featuresMap,
         this.agencyProfiles
       );
       if (initialAnalysis.risk_score >= 50) {
@@ -111,8 +112,8 @@ export class StorageService {
       const analysis = RiskScoringService.evaluateProject(
         p,
         feat,
-        this.peerGroups,
         this.projects,
+        this.featuresMap,
         this.agencyProfiles
       );
 
@@ -189,7 +190,7 @@ export class StorageService {
             projectB: other,
             similarity: match.semantic_similarity,
             distance_km: match.distance_km,
-            risk_level: match.semantic_similarity >= 80 && match.distance_km <= 5.0 ? 'CRITICAL' : 'HIGH',
+            risk_level: match.risk_indicator === 'Potential Duplicate' ? 'CRITICAL' : 'HIGH',
             reasons: match.reasons
           });
         }
@@ -203,7 +204,7 @@ export class StorageService {
     this.initialize();
     const all = Array.from(this.enrichedProjects.values());
     const total = all.length;
-    
+
     let low = 0, moderate = 0, high = 0, critical = 0;
     let totalSanctioned = 0;
     let totalExp = 0;
@@ -212,8 +213,14 @@ export class StorageService {
     let progressMismatchCount = 0;
     let financialAnomalyCount = 0;
     let duplicateCandidatesCount = 0;
+
+    // Actual Data Quality Counters (No hardcoded metrics)
     let missingCoords = 0;
     let missingCompletion = 0;
+    let missingRequiredFields = 0;
+    let invalidRecords = 0;
+    let totalChecksPassed = 0;
+    const CHECKS_PER_RECORD = 6;
 
     for (const p of all) {
       totalSanctioned += p.sanctioned_amount;
@@ -230,12 +237,65 @@ export class StorageService {
       if (p.risk_breakdown.financial_risk >= 10) financialAnomalyCount++;
       if (p.duplicate_candidates.length > 0) duplicateCandidatesCount++;
 
-      if (!p.latitude || !p.longitude) missingCoords++;
-      if (p.status === 'Completed' && !p.completion_date) missingCompletion++;
+      // Check 1: Coordinates validity
+      const hasCoords = Boolean(
+        p.latitude && p.longitude &&
+        !isNaN(p.latitude) && !isNaN(p.longitude) &&
+        p.latitude >= 6 && p.latitude <= 38 &&
+        p.longitude >= 68 && p.longitude <= 98
+      );
+      if (hasCoords) totalChecksPassed++;
+      else missingCoords++;
+
+      // Check 2: Completion date consistency
+      const hasCompletionDate = p.status !== 'Completed' || (Boolean(p.completion_date) && Boolean(p.completion_date?.trim()));
+      if (hasCompletionDate) totalChecksPassed++;
+      else missingCompletion++;
+
+      // Check 3: Mandatory text identification fields
+      const hasIdentity = Boolean(
+        p.project_id && p.project_id.trim() !== '' &&
+        p.work_name && p.work_name.trim() !== '' &&
+        p.state && p.state.trim() !== '' &&
+        p.district && p.district.trim() !== ''
+      );
+      if (hasIdentity) totalChecksPassed++;
+      else missingRequiredFields++;
+
+      // Check 4: Mandatory category and agency fields
+      const hasClassification = Boolean(
+        p.sector && p.work_type && p.implementing_agency && p.status
+      );
+      if (hasClassification) totalChecksPassed++;
+
+      // Check 5: Financial validity (positive, non-zero numbers)
+      const hasValidFinances = (
+        !isNaN(p.sanctioned_amount) && p.sanctioned_amount > 0 &&
+        !isNaN(p.estimated_cost) && p.estimated_cost > 0 &&
+        !isNaN(p.actual_expenditure) && p.actual_expenditure >= 0
+      );
+      if (hasValidFinances) totalChecksPassed++;
+
+      // Check 6: Valid progress bounds and timeline
+      const hasValidTimeline = (
+        !isNaN(p.physical_progress_percentage) &&
+        p.physical_progress_percentage >= 0 && p.physical_progress_percentage <= 100 &&
+        Boolean(p.sanction_date && p.expected_completion_date)
+      );
+      if (hasValidTimeline) totalChecksPassed++;
+
+      // An invalid record fails critical required fields, finances, or coordinates
+      if (!hasCoords || !hasCompletionDate || !hasIdentity || !hasClassification || !hasValidFinances || !hasValidTimeline) {
+        invalidRecords++;
+      }
     }
 
     const avgRisk = total > 0 ? Math.round(scoreSum / total) : 0;
-    const reviewReq = critical + high;
+    const validRecords = total - invalidRecords;
+    const totalPossibleChecks = total * CHECKS_PER_RECORD;
+    const dataIntegrityPct = totalPossibleChecks > 0
+      ? Number(((totalChecksPassed / totalPossibleChecks) * 100).toFixed(1))
+      : 100.0;
 
     return {
       total_projects: total,
@@ -250,11 +310,13 @@ export class StorageService {
       financial_anomaly_count: financialAnomalyCount,
       data_quality: {
         total_projects: total,
-        valid_records: total - missingCoords,
-        records_requiring_review: reviewReq,
+        valid_records: validRecords,
+        invalid_records: invalidRecords,
+        records_requiring_review: high + critical,
         missing_coordinates_count: missingCoords,
         missing_completion_dates_count: missingCompletion,
-        data_integrity_score_pct: 98.4,
+        missing_required_fields_count: missingRequiredFields,
+        data_integrity_score_pct: dataIntegrityPct,
         last_analyzed_at: this.lastAnalyzedAt
       }
     };

@@ -5,7 +5,7 @@ import * as path from 'path';
 export function generateSyntheticProjects(): Project[] {
   const projects: Project[] = [];
 
-  // 1. SPECIFIC DEMO ANOMALY 1: Massive Financial Overrun / Cost Outlier
+  // 1. SPECIFIC DEMO ANOMALY 1: Massive Financial Overrun / Peer Cost Outlier
   projects.push({
     project_id: 'DEMO-001',
     work_name: 'Construction of CC Road from Main Market to Panchayat Bhavan, Barabanki',
@@ -61,7 +61,7 @@ export function generateSyntheticProjects(): Project[] {
     created_at: '2022-04-15T11:00:00Z'
   });
 
-  // 3. SPECIFIC DEMO ANOMALY 3: Severe Expenditure vs Physical Progress Gap (95% funds disbursed, 30% progress)
+  // 3. SPECIFIC DEMO ANOMALY 3: Severe Expenditure vs Physical Progress Gap (96% funds disbursed, 30% progress)
   projects.push({
     project_id: 'DEMO-003',
     work_name: 'Installation of 150 High-Mast Solar Street Light Units across 12 Rural Wards',
@@ -161,7 +161,7 @@ export function generateSyntheticProjects(): Project[] {
     start_date: '2023-01-15',
     expected_completion_date: '2023-09-30',
     completion_date: null,
-    status: 'In Progress',
+    status: 'Delayed',
     physical_progress_percentage: 62,
     implementing_agency: 'District Rural Infrastructure Corp (DRIC)',
     latitude: 25.6295,
@@ -172,7 +172,7 @@ export function generateSyntheticProjects(): Project[] {
     created_at: '2022-11-10T11:20:00Z'
   });
 
-  // Regional templates for remaining 245 realistic projects
+  // Regional templates for remaining 244 realistic projects
   const statesAndDistricts = [
     { state: 'Uttar Pradesh', districts: ['Lucknow', 'Varanasi', 'Gorakhpur', 'Barabanki', 'Ghaziabad', 'Agra', 'Kanpur Nagar', 'Prayagraj', 'Meerut', 'Aligarh'], mp: 'Rajveer Singh', constituency: 'Regional Central' },
     { state: 'Maharashtra', districts: ['Pune', 'Nagpur', 'Nashik', 'Thane', 'Kolhapur', 'Solapur', 'Aurangabad', 'Amravati'], mp: 'Sanjay Deshmukh', constituency: 'Maharashtra West' },
@@ -267,7 +267,7 @@ export function generateSyntheticProjects(): Project[] {
       costRange: [2000000, 4500000],
       qtyRange: [1.2, 3.5],
       durationMonths: [5, 10],
-      agencies: ['Urban Local Bodies Directorate', 'Jal Sansthan', 'Rural Works Department']
+      agencies: ['Urban Local Bodies Directorate', 'Jal Sansthan', 'District Rural Infrastructure Corp (DRIC)']
     },
     {
       sector: 'Rural Development',
@@ -287,7 +287,7 @@ export function generateSyntheticProjects(): Project[] {
       costRange: [1100000, 2000000],
       qtyRange: [1, 1],
       durationMonths: [3, 6],
-      agencies: ['Zila Parishad', 'Municipal Council', 'Panchayat Samiti']
+      agencies: ['Zila Parishad', 'Municipal Council', 'District Rural Infrastructure Corp (DRIC)']
     },
     {
       sector: 'Sports & Youth Affairs',
@@ -324,7 +324,7 @@ export function generateSyntheticProjects(): Project[] {
   };
 
   let idCounter = 7;
-  // Generate 244 additional projects (total ~250)
+  // Generate 244 additional projects (total 250)
   for (let i = 0; i < 244; i++) {
     const stateObj = statesAndDistricts[i % statesAndDistricts.length];
     const district = stateObj.districts[i % stateObj.districts.length];
@@ -358,8 +358,21 @@ export function generateSyntheticProjects(): Project[] {
     let actual_expenditure = Math.round(baseCost * (0.92 + (i % 8) * 0.015));
     let completion_date: string | null = null;
 
-    // Introduce natural variations and some mild/moderate anomalies
-    if (i % 7 === 0) {
+    // Introduce natural variations and realistic operational statuses
+    if (agency === 'District Rural Infrastructure Corp (DRIC)') {
+      // DRIC has a systemic pattern: high delay rate and overruns
+      if (i % 2 === 0) {
+        status = 'Delayed';
+        physical_progress_percentage = 55;
+        actual_expenditure = Math.round(baseCost * 1.18); // 18% cost overrun
+        completion_date = null;
+      } else {
+        status = 'In Progress';
+        physical_progress_percentage = 70;
+        actual_expenditure = Math.round(baseCost * 0.95);
+        completion_date = null;
+      }
+    } else if (i % 7 === 0) {
       // In progress project
       status = 'In Progress';
       physical_progress_percentage = 40 + (i % 45);
@@ -367,7 +380,7 @@ export function generateSyntheticProjects(): Project[] {
       completion_date = null;
     } else if (i % 19 === 0) {
       // Moderate delay anomaly
-      status = 'In Progress';
+      status = 'Delayed';
       physical_progress_percentage = 65;
       actual_expenditure = Math.round(baseCost * 0.85);
       completion_date = null;
@@ -375,7 +388,7 @@ export function generateSyntheticProjects(): Project[] {
       // Moderate cost variance
       status = 'Completed';
       physical_progress_percentage = 100;
-      actual_expenditure = Math.round(baseCost * 1.25); // 25% overrun
+      actual_expenditure = Math.round(baseCost * 1.22); // 22% overrun
       const compDateObj = new Date(expDateObj);
       compDateObj.setDate(compDateObj.getDate() + 45);
       completion_date = compDateObj.toISOString().split('T')[0];
@@ -398,11 +411,21 @@ export function generateSyntheticProjects(): Project[] {
     const baseCoords = stateCoordinates[stateObj.state] || { lat: 23.5, lng: 80.0 };
     const latJitter = ((i * 17) % 100 - 50) * 0.035;
     const lngJitter = ((i * 29) % 100 - 50) * 0.035;
-    const latitude = Number((baseCoords.lat + latJitter).toFixed(4));
-    const longitude = Number((baseCoords.lng + lngJitter).toFixed(4));
+    let latitude = Number((baseCoords.lat + latJitter).toFixed(4));
+    let longitude = Number((baseCoords.lng + lngJitter).toFixed(4));
+
+    // Introduce 2 realistic missing-coordinate cases in data quality audit
+    if (i === 42 || i === 118) {
+      latitude = 0;
+      longitude = 0;
+    }
+
+    // Introduce 1 completed project with missing completion date in data quality audit
+    if (i === 87 && status === 'Completed') {
+      completion_date = null;
+    }
 
     const beneficiary_count = Math.round(1500 + (baseCost / 1000) * 1.2 + (i % 10) * 200);
-
     const projectId = `MPL-${year}-${stateObj.state.substring(0, 2).toUpperCase()}-${String(idCounter).padStart(4, '0')}`;
     idCounter++;
 

@@ -23,6 +23,8 @@ export interface AnomalyEvidence {
 
 export interface PeerBenchmark {
   peer_group_name: string;
+  peer_group_definition: string;
+  peer_level: 'DISTRICT' | 'STATE' | 'SECTOR';
   peer_count: number;
   peer_cost_median: number;
   peer_cost_mean: number;
@@ -30,6 +32,7 @@ export interface PeerBenchmark {
   peer_duration_median_days: number;
   cost_percentile: number;
   cost_deviation_pct: number;
+  deviation_from_peer: number;
   duration_deviation_pct: number;
   unit_cost_observed?: number;
   unit_cost_peer_median?: number;
@@ -43,7 +46,7 @@ export interface DuplicateMatch {
   matched_sanctioned_amount: number;
   semantic_similarity: number;
   distance_km: number;
-  risk_indicator: 'Potential Duplicate' | 'Overlapping Scope' | 'Nearby Similar Work';
+  risk_indicator: 'Potential Duplicate' | 'Overlapping Scope' | 'Requires Verification';
   reasons: string[];
 }
 
@@ -63,7 +66,7 @@ export interface Project {
   start_date: string;
   expected_completion_date: string;
   completion_date?: string | null;
-  status: 'Completed' | 'In Progress' | 'Stalled' | 'Sanctioned' | 'Cancelled';
+  status: 'Sanctioned' | 'In Progress' | 'Delayed' | 'Completed' | 'Stalled';
   physical_progress_percentage: number;
   implementing_agency: string;
   latitude: number;
@@ -83,9 +86,11 @@ export interface Project {
 export interface DataQualitySummary {
   total_projects: number;
   valid_records: number;
+  invalid_records: number;
   records_requiring_review: number;
   missing_coordinates_count: number;
   missing_completion_dates_count: number;
+  missing_required_fields_count: number;
   data_integrity_score_pct: number;
   last_analyzed_at: string;
 }
@@ -147,12 +152,11 @@ export interface SystemConfig {
     agency_weight: number;
   };
   thresholds: {
-    cost_overrun_threshold_pct: number;
     peer_cost_deviation_threshold_pct: number;
+    cost_overrun_threshold_pct: number;
     expenditure_progress_gap_threshold: number;
     delay_days_threshold: number;
     semantic_similarity_threshold: number;
     duplicate_distance_threshold_km: number;
-    agency_delay_rate_threshold_pct: number;
   };
 }

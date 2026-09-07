@@ -1,27 +1,31 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  ShieldAlert, 
-  Calendar, 
-  Coins, 
-  MapPin, 
-  User, 
-  Building2, 
-  Layers, 
-  AlertOctagon, 
-  TrendingUp, 
-  Clock, 
-  Copy, 
-  CheckCircle2, 
-  FileCheck, 
+import {
+  AlertTriangle,
+  Clock,
+  TrendingUp,
+  Copy,
+  Building2,
+  Calendar,
+  IndianRupee,
+  MapPin,
+  CheckCircle2,
+  AlertOctagon,
+  FileCheck,
   ChevronRight,
-  ExternalLink,
-  Info,
   ArrowRight
 } from 'lucide-react';
-import { Project, AnomalyEvidence, DuplicateMatch } from '../types';
+import { Project, RiskLevel } from '../types';
 import { RiskBadge } from '../components/RiskBadge';
 import { apiClient } from '../services/api';
-import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid } from 'recharts';
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  Tooltip,
+  ResponsiveContainer,
+  CartesianGrid
+} from 'recharts';
 
 interface InvestigationViewProps {
   projectId: string;
@@ -102,11 +106,11 @@ export const InvestigationView: React.FC<InvestigationViewProps> = ({
           <select
             value={project.project_id}
             onChange={(e) => onSelectProject(e.target.value)}
-            className="bg-slate-950 border border-slate-700 rounded-lg px-3 py-1 text-xs text-slate-200 font-mono focus:outline-none focus:border-teal-500"
+            className="bg-slate-950 border border-slate-700 rounded-lg px-3 py-1 text-xs text-slate-200 font-mono focus:outline-none focus:border-teal-500 cursor-pointer"
           >
             <optgroup label="Special Demo Benchmark Anomalies">
-              <option value="DEMO-001">DEMO-001 • CC Road (Cost Outlier +275%)</option>
-              <option value="DEMO-002">DEMO-002 • Health Wing (Severe 900d Delay)</option>
+              <option value="DEMO-001">DEMO-001 • CC Road (Cost Outlier +240%)</option>
+              <option value="DEMO-002">DEMO-002 • Health Wing (Severe Delay & Stalled)</option>
               <option value="DEMO-003">DEMO-003 • Solar Lights (96% Exp / 30% Prog)</option>
               <option value="DEMO-004">DEMO-004 • Community Hall (Duplicate Pair A)</option>
               <option value="DEMO-005">DEMO-005 • Cultural Hall (Duplicate Pair B)</option>
@@ -140,94 +144,145 @@ export const InvestigationView: React.FC<InvestigationViewProps> = ({
               </span>
             </div>
 
-            <h1 className="text-xl sm:text-2xl font-black text-slate-100 leading-tight">
+            <h1 className="text-xl font-black text-slate-100 leading-snug">
               {project.work_name}
             </h1>
 
-            <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-xs text-slate-300 pt-1">
-              <div className="flex items-center gap-1.5">
-                <MapPin className="w-3.5 h-3.5 text-teal-400" />
-                <span>{project.district}, {project.state} ({project.constituency})</span>
-              </div>
-              <div className="flex items-center gap-1.5">
-                <User className="w-3.5 h-3.5 text-cyan-400" />
-                <span>MP: <strong>{project.mp_name}</strong></span>
-              </div>
-              <div className="flex items-center gap-1.5">
-                <Building2 className="w-3.5 h-3.5 text-amber-400" />
-                <span>Agency: <strong>{project.implementing_agency}</strong></span>
-              </div>
+            <div className="flex flex-wrap items-center gap-4 text-xs text-slate-400 pt-1">
+              <span className="flex items-center gap-1.5">
+                <MapPin className="w-3.5 h-3.5 text-slate-500" />
+                {project.district}, {project.state} ({project.constituency})
+              </span>
+              <span className="flex items-center gap-1.5">
+                <Building2 className="w-3.5 h-3.5 text-slate-500" />
+                Agency: <strong className="text-slate-200 font-semibold">{project.implementing_agency}</strong>
+              </span>
+              <span className="flex items-center gap-1.5">
+                MP: <strong className="text-slate-200">{project.mp_name}</strong>
+              </span>
             </div>
           </div>
 
-          {/* Large Overall Risk Score Ring */}
-          <div className="flex flex-col items-center justify-center p-4 rounded-xl bg-slate-950/80 border border-slate-800 min-w-[180px]">
-            <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Risk Score Index</span>
-            <div className="flex items-baseline gap-1 my-1">
-              <span className={`text-4xl font-black ${
-                project.risk_score >= 75 ? 'text-rose-400' :
-                project.risk_score >= 50 ? 'text-orange-400' :
-                project.risk_score >= 25 ? 'text-amber-400' : 'text-emerald-400'
+          {/* Composite Gauge Box */}
+          <div className="flex flex-col items-center justify-center p-5 rounded-xl bg-slate-950/80 border border-slate-800 shrink-0 min-w-[180px]">
+            <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1">Composite Risk Score</span>
+            <div className="relative flex items-center justify-center">
+              <span className={`text-4xl font-black font-mono ${
+                project.risk_score >= 70 ? 'text-rose-400' :
+                project.risk_score >= 45 ? 'text-orange-400' :
+                project.risk_score >= 25 ? 'text-amber-400' :
+                'text-emerald-400'
               }`}>
                 {project.risk_score}
               </span>
-              <span className="text-sm text-slate-500 font-bold">/100</span>
+              <span className="text-xs text-slate-500 ml-0.5 mt-2 font-mono">/ 100</span>
             </div>
-            <RiskBadge level={project.risk_level} size="sm" />
+            <span className="text-[10px] text-slate-400 uppercase tracking-wider mt-1 text-center font-medium">
+              Deterministic Multi-Signal Audit
+            </span>
           </div>
         </div>
 
-        {/* Quick Financial & Execution KPI Bar */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-6 pt-5 border-t border-slate-800/80 text-xs">
-          <div className="p-3 rounded-lg bg-slate-950/60 border border-slate-800">
-            <span className="text-slate-400 block mb-1">Sanctioned Amount</span>
-            <span className="text-base font-bold font-mono text-slate-100">
-              ₹{(project.sanctioned_amount / 100000).toFixed(2)} Lakh
+        {/* Primary Alert Banner */}
+        <div className="mt-5 p-3.5 rounded-lg bg-slate-950/90 border border-slate-800 flex items-start gap-3">
+          <AlertTriangle className={`w-4 h-4 mt-0.5 shrink-0 ${
+            project.risk_score >= 70 ? 'text-rose-400' :
+            project.risk_score >= 45 ? 'text-orange-400' :
+            project.risk_score >= 25 ? 'text-amber-400' :
+            'text-emerald-400'
+          }`} />
+          <div>
+            <span className="text-xs font-bold text-slate-300 uppercase tracking-wider block">
+              Primary Audit Finding:
             </span>
-            <span className="text-[10px] text-slate-500 block mt-0.5">Est: ₹{(project.estimated_cost / 100000).toFixed(2)} L</span>
-          </div>
-
-          <div className="p-3 rounded-lg bg-slate-950/60 border border-slate-800">
-            <span className="text-slate-400 block mb-1">Actual Disbursed</span>
-            <span className="text-base font-bold font-mono text-cyan-300">
-              ₹{(project.actual_expenditure / 100000).toFixed(2)} Lakh
-            </span>
-            <span className="text-[10px] text-slate-400 block mt-0.5">Utilization: <strong>{expPct}%</strong></span>
-          </div>
-
-          <div className="p-3 rounded-lg bg-slate-950/60 border border-slate-800">
-            <span className="text-slate-400 block mb-1">Physical Progress</span>
-            <span className="text-base font-bold font-mono text-emerald-400">
-              {project.physical_progress_percentage}%
-            </span>
-            <span className="text-[10px] text-slate-400 block mt-0.5">Scope: {project.quantity} {project.unit}</span>
-          </div>
-
-          <div className="p-3 rounded-lg bg-slate-950/60 border border-slate-800">
-            <span className="text-slate-400 block mb-1">Target Timeline</span>
-            <span className="text-sm font-semibold text-slate-200">
-              {project.expected_completion_date}
-            </span>
-            <span className="text-[10px] text-slate-400 block mt-0.5">Sanctioned: {project.sanction_date}</span>
+            <p className="text-xs text-slate-300 mt-0.5 font-medium">
+              {project.primary_reason}
+            </p>
           </div>
         </div>
       </div>
 
-      {/* Two Column Grid: Risk Breakdown + Peer Benchmarking */}
+      {/* 4 Financial & Timeline KPI Cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        {/* Sanctioned */}
+        <div className="bg-slate-900/90 border border-slate-800 rounded-xl p-4 shadow-lg">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-bold uppercase text-slate-400">Sanctioned Budget</span>
+            <IndianRupee className="w-4 h-4 text-teal-400" />
+          </div>
+          <p className="text-xl font-bold font-mono text-slate-100 mt-2">
+            ₹{(project.sanctioned_amount / 100000).toFixed(2)} Lakh
+          </p>
+          <p className="text-[11px] text-slate-400 mt-1">
+            Technical Est: ₹{(project.estimated_cost / 100000).toFixed(2)} L
+          </p>
+        </div>
+
+        {/* Actual Disbursed */}
+        <div className="bg-slate-900/90 border border-slate-800 rounded-xl p-4 shadow-lg">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-bold uppercase text-slate-400">Actual Disbursed</span>
+            <TrendingUp className="w-4 h-4 text-purple-400" />
+          </div>
+          <p className="text-xl font-bold font-mono text-slate-100 mt-2">
+            ₹{(project.actual_expenditure / 100000).toFixed(2)} Lakh
+          </p>
+          <div className="flex items-center gap-2 mt-1">
+            <div className="w-full bg-slate-800 h-1.5 rounded-full overflow-hidden">
+              <div
+                className={`h-full rounded-full ${expPct > 90 ? 'bg-purple-500' : 'bg-teal-500'}`}
+                style={{ width: `${Math.min(100, expPct)}%` }}
+              />
+            </div>
+            <span className="text-[11px] font-mono text-slate-400 font-bold shrink-0">{expPct}%</span>
+          </div>
+        </div>
+
+        {/* Physical Progress */}
+        <div className="bg-slate-900/90 border border-slate-800 rounded-xl p-4 shadow-lg">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-bold uppercase text-slate-400">Physical Progress</span>
+            <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+          </div>
+          <p className="text-xl font-bold font-mono text-slate-100 mt-2">
+            {project.physical_progress_percentage}%
+          </p>
+          <div className="flex items-center gap-2 mt-1">
+            <div className="w-full bg-slate-800 h-1.5 rounded-full overflow-hidden">
+              <div
+                className="bg-emerald-500 h-full rounded-full"
+                style={{ width: `${project.physical_progress_percentage}%` }}
+              />
+            </div>
+            <span className="text-[11px] text-slate-400 shrink-0">Ground verified</span>
+          </div>
+        </div>
+
+        {/* Timeline Schedule */}
+        <div className="bg-slate-900/90 border border-slate-800 rounded-xl p-4 shadow-lg">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-bold uppercase text-slate-400">Target Timeline</span>
+            <Calendar className="w-4 h-4 text-orange-400" />
+          </div>
+          <p className="text-sm font-bold text-slate-200 mt-2 font-mono">
+            {project.expected_completion_date}
+          </p>
+          <p className="text-[11px] text-slate-400 mt-1">
+            Sanction: {project.sanction_date}
+          </p>
+        </div>
+      </div>
+
+      {/* Risk Dimension Breakdown & Peer Comparison */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Multi-Signal Breakdown Card */}
+        {/* Risk Signal Breakdown Bar Chart */}
         <div className="bg-slate-900/90 border border-slate-800 rounded-xl p-5 shadow-lg space-y-4">
           <div className="flex items-center justify-between">
-            <div>
-              <h3 className="text-sm font-bold text-slate-100 uppercase tracking-wider">Multi-Signal Risk Assessment</h3>
-              <p className="text-xs text-slate-400">Contribution of independent analytical risk dimensions</p>
-            </div>
-            <span className="text-xs font-mono font-bold text-teal-400 bg-slate-800 px-2 py-0.5 rounded border border-slate-700">
-              Total: {project.risk_score} pts
-            </span>
+            <h3 className="text-sm font-bold text-slate-100 uppercase tracking-wider">Risk Contribution Breakdown</h3>
+            <span className="text-xs text-slate-400">Deterministic Sum = {project.risk_score} pts</span>
           </div>
 
-          <div className="space-y-3.5 pt-2">
+          <div className="space-y-3 pt-2">
             {/* Financial Risk */}
             <div>
               <div className="flex justify-between text-xs mb-1">
@@ -300,8 +355,17 @@ export const InvestigationView: React.FC<InvestigationViewProps> = ({
         <div className="bg-slate-900/90 border border-slate-800 rounded-xl p-5 shadow-lg space-y-4">
           <div className="flex items-center justify-between">
             <div>
-              <h3 className="text-sm font-bold text-slate-100 uppercase tracking-wider">Peer Benchmarking</h3>
-              <p className="text-xs text-slate-400">Comparison against {project.peer_benchmark?.peer_count} peer works ({project.peer_benchmark?.peer_group_name})</p>
+              <div className="flex items-center gap-2">
+                <h3 className="text-sm font-bold text-slate-100 uppercase tracking-wider">Hierarchical Peer Benchmarking</h3>
+                {project.peer_benchmark?.peer_level && (
+                  <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-teal-500/20 text-teal-300 border border-teal-500/30">
+                    {project.peer_benchmark.peer_level} LEVEL
+                  </span>
+                )}
+              </div>
+              <p className="text-xs text-slate-400 mt-0.5">
+                {project.peer_benchmark?.peer_group_definition || project.peer_benchmark?.peer_group_name} (excluding self)
+              </p>
             </div>
             <span className={`text-xs font-bold px-2 py-0.5 rounded ${
               costDev > 40 ? 'bg-rose-950/60 text-rose-300 border border-rose-500/40' :
@@ -326,7 +390,7 @@ export const InvestigationView: React.FC<InvestigationViewProps> = ({
               <span className="text-sm font-bold font-mono text-cyan-300 mt-1 block">
                 ₹{(peerMedian / 100000).toFixed(1)} Lakh
               </span>
-              <span className="text-[10px] text-slate-500">n = {project.peer_benchmark?.peer_count} works</span>
+              <span className="text-[10px] text-slate-500">n = {project.peer_benchmark?.peer_count} peer works</span>
             </div>
 
             <div className="p-3 rounded-lg bg-slate-950/70 border border-slate-800">
@@ -451,7 +515,7 @@ export const InvestigationView: React.FC<InvestigationViewProps> = ({
                 </h3>
               </div>
               <p className="text-xs text-slate-400 mt-0.5">
-                Lexical NLP embedding and Haversine distance proximity match
+                Lexical NLP similarity and Haversine distance proximity match
               </p>
             </div>
             <span className="text-xs font-semibold px-2 py-0.5 rounded bg-amber-500/10 text-amber-300 border border-amber-500/30">
@@ -460,40 +524,26 @@ export const InvestigationView: React.FC<InvestigationViewProps> = ({
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {project.duplicate_candidates.map((match, idx) => (
-              <div
-                key={idx}
-                className="p-4 rounded-xl bg-slate-950/80 border border-slate-800 space-y-3"
-              >
+            {project.duplicate_candidates.map((match, i) => (
+              <div key={i} className="p-4 rounded-xl bg-slate-950 border border-slate-800 space-y-3">
                 <div className="flex items-center justify-between">
-                  <span className="font-mono text-xs font-bold text-teal-400 bg-slate-800 px-2 py-0.5 rounded border border-slate-700">
-                    {match.matched_project_id}
+                  <span className="font-mono text-xs font-bold text-amber-400">{match.matched_project_id}</span>
+                  <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-amber-950/80 text-amber-300 border border-amber-500/40">
+                    {match.risk_indicator}
                   </span>
-                  <div className="flex items-center gap-1.5">
-                    <span className="text-xs font-bold text-amber-300 bg-amber-950/60 px-2 py-0.5 rounded border border-amber-500/30">
-                      {match.semantic_similarity}% NLP Match
-                    </span>
-                    <span className="text-xs font-bold text-cyan-300 bg-cyan-950/60 px-2 py-0.5 rounded border border-cyan-500/30">
-                      {match.distance_km} km away
-                    </span>
-                  </div>
                 </div>
-
-                <p className="text-xs font-semibold text-slate-200 line-clamp-2">
-                  {match.matched_work_name}
-                </p>
-
-                <div className="text-[11px] text-slate-400 flex items-center justify-between pt-1 border-t border-slate-800">
-                  <span>Sanctioned: ₹{(match.matched_sanctioned_amount / 100000).toFixed(1)} L</span>
-                  <span>{match.matched_district}</span>
+                <h4 className="text-xs font-bold text-slate-200">{match.matched_work_name}</h4>
+                <div className="grid grid-cols-2 gap-2 text-[11px] text-slate-400">
+                  <div>Similarity: <strong className="text-slate-200">{match.semantic_similarity}%</strong></div>
+                  <div>Distance: <strong className="text-slate-200">{match.distance_km} km</strong></div>
+                  <div>District: <strong className="text-slate-200">{match.matched_district}</strong></div>
+                  <div>Agency: <strong className="text-slate-200">{match.matched_agency}</strong></div>
                 </div>
-
                 <button
                   onClick={() => onSelectProject(match.matched_project_id)}
-                  className="w-full mt-2 py-1.5 rounded-lg bg-teal-600/20 hover:bg-teal-600/30 text-teal-300 border border-teal-500/40 text-xs font-semibold flex items-center justify-center gap-1 transition"
+                  className="w-full mt-2 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold border border-slate-700 transition cursor-pointer"
                 >
-                  <span>Investigate Matched Work ({match.matched_project_id})</span>
-                  <ArrowRight className="w-3.5 h-3.5" />
+                  Inspect Matched Project Dossier
                 </button>
               </div>
             ))}

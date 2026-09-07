@@ -1,28 +1,26 @@
-export type ProjectStatus = 'Completed' | 'In Progress' | 'Stalled' | 'Sanctioned' | 'Cancelled';
-
-export type SectorType = 
-  | 'Infrastructure'
-  | 'Education'
-  | 'Healthcare'
-  | 'Water & Sanitation'
-  | 'Rural Development'
-  | 'Energy & Lighting'
-  | 'Public Amenities'
-  | 'Sports & Youth Affairs';
+export type SectorType =
+  | 'Drinking Water & Sanitation'
+  | 'Education & School Infrastructure'
+  | 'Health & Family Welfare'
+  | 'Roads, Bridges & Pathways'
+  | 'Community Infrastructure & Public Halls'
+  | 'Renewable Energy & Public Lighting'
+  | 'Irrigation & Flood Control'
+  | 'Sports & Youth Development';
 
 export type WorkType =
-  | 'Road Construction'
-  | 'Community Hall'
-  | 'Drinking Water Borewell'
-  | 'Solar Street Lights'
-  | 'School Classroom Block'
-  | 'Primary Health Centre'
-  | 'Public Library'
-  | 'Drainage Network'
-  | 'Anganwadi Centre'
-  | 'Crematorium Shed'
-  | 'Open Gym & Sports'
-  | 'Irrigation Canal';
+  | 'Borewell & Water Purification Unit'
+  | 'Piped Drinking Water Supply Scheme'
+  | 'School Classroom & Smart Lab Construction'
+  | 'Primary Health Centre Ward Modernization'
+  | 'Concrete & Interlocking Pavement Road'
+  | 'Culvert & Small Span Bridge'
+  | 'Multipurpose Community Centre Hall'
+  | 'Solar High-Mast Street Light Installation'
+  | 'Minor Check Dam & Pond Rejuvenation'
+  | 'Public Sports Complex & Gymnasium';
+
+export type ProjectStatus = 'Sanctioned' | 'In Progress' | 'Delayed' | 'Completed' | 'Stalled';
 
 export interface Project {
   project_id: string;
@@ -54,12 +52,12 @@ export interface Project {
 export type RiskLevel = 'LOW' | 'MODERATE' | 'HIGH' | 'CRITICAL';
 
 export interface RiskBreakdown {
-  financial_risk: number;      // 0 - 25
-  delay_risk: number;          // 0 - 20
+  financial_risk: number;         // 0 - 25
+  delay_risk: number;             // 0 - 20
   progress_mismatch_risk: number; // 0 - 20
-  duplicate_risk: number;      // 0 - 15
-  geospatial_risk: number;     // 0 - 10
-  agency_risk: number;         // 0 - 10
+  duplicate_risk: number;         // 0 - 15
+  geospatial_risk: number;        // 0 - 10
+  agency_risk: number;            // 0 - 10
 }
 
 export interface AnomalyEvidence {
@@ -76,6 +74,8 @@ export interface AnomalyEvidence {
 
 export interface PeerBenchmark {
   peer_group_name: string;
+  peer_group_definition: string;
+  peer_level: 'DISTRICT' | 'STATE' | 'SECTOR';
   peer_count: number;
   peer_cost_median: number;
   peer_cost_mean: number;
@@ -83,6 +83,7 @@ export interface PeerBenchmark {
   peer_duration_median_days: number;
   cost_percentile: number;
   cost_deviation_pct: number;
+  deviation_from_peer: number;
   duration_deviation_pct: number;
   unit_cost_observed?: number;
   unit_cost_peer_median?: number;
@@ -96,7 +97,7 @@ export interface DuplicateMatch {
   matched_sanctioned_amount: number;
   semantic_similarity: number; // 0 - 100 %
   distance_km: number;
-  risk_indicator: 'Potential Duplicate' | 'Overlapping Scope' | 'Nearby Similar Work';
+  risk_indicator: 'Potential Duplicate' | 'Overlapping Scope' | 'Requires Verification';
   reasons: string[];
 }
 

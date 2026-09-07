@@ -12,46 +12,49 @@
 
 **MPLAD SENTINEL** is a full-stack risk intelligence and governance decision-support platform designed to monitor, benchmark, and audit projects implemented under the **Member of Parliament Local Area Development Scheme (MPLADS)**.
 
-Traditional oversight systems rely on manual sample audits or generic expenditure dashboards. MPLAD Sentinel introduces **deterministic feature extraction**, **dynamic peer benchmarking**, **NLP semantic description embeddings**, **Haversine geospatial clustering**, and **implementing agency behavioral profiling** to assign every project an auditable **0–100 Composite Risk Score** accompanied by transparent, evidence-backed explanations.
+Traditional oversight systems rely on manual sample audits or generic expenditure dashboards. MPLAD Sentinel introduces **deterministic feature extraction**, **hierarchical peer benchmarking (District → State → Sector)**, **NLP token/n-gram semantic similarity**, **Haversine geospatial clustering**, and **implementing agency behavioral profiling** to assign every project an auditable **0–100 Composite Risk Score** accompanied by transparent, evidence-backed explanations.
 
 ```
 ┌────────────────────────────────────────────────────────────────────────────────────────┐
 │                                 MPLAD SENTINEL PIPELINE                                │
 ├───────────────┬─────────────────────────┬────────────────────────┬─────────────────────┤
 │ 1. INGESTION  │ 2. FEATURE EXTRACTION   │ 3. PEER BENCHMARKING   │ 4. DECISION SUPPORT │
-│ • MPLADS CSV  │ • Cost Overrun Ratio    │ • Sector/Type Medians  │ • 0-100 Risk Score  │
-│ • Schema Clean│ • Delay Days Elapsed    │ • Percentile Norms     │ • Auditable Evidence│
-│ • Geo Coordinates • Fund vs Progress Gap│ • TF-IDF/Cosine NLP    │ • Priority Queue    │
+│ • MPLADS CSV  │ • Cost Overrun Ratio    │ • Hierarchical Levels  │ • 0-100 Risk Score  │
+│ • Schema Audit│ • Delay Days Elapsed    │ • Self-Excluding Norms │ • Auditable Evidence│
+│ • Data Quality│ • Fund vs Progress Gap  │ • Hybrid Lexical NLP   │ • Priority Queue    │
 │ • Agency Logs │ • Stalled Flagging      │ • Haversine Distance   │ • Copilot Insights  │
 └───────────────┴─────────────────────────┴────────────────────────┴─────────────────────┘
 ```
 
 ---
 
-## 🎯 Benchmark Anomaly Test Cases (Ready for SIH Judges)
+## 🎯 Benchmark Anomaly Test Cases (Ready for Evaluation)
 
-The system is seeded with **250+ realistic MPLADS projects** across 12 Indian states, including 6 benchmark anomaly scenarios ready for 1-click evaluation:
+The system is seeded with **250 realistic MPLADS projects** across 12 Indian states, including 6 benchmark anomaly scenarios ready for 1-click evaluation:
 
 | Case ID | Work Description & District | Anomalous Signal Detected | Expected Score & Severity |
 | :--- | :--- | :--- | :--- |
-| **DEMO-001** | Construction of High-Specification CC Road, Varanasi, UP | **Financial Outlier**: Sanctioned cost (₹95.0 Lakh) is **+275% above peer median** (₹25.3 Lakh) for road works | **Score: 78/100 (CRITICAL)** |
-| **DEMO-002** | Upgradation of Community Health Centre Specialized Wing, Patna, Bihar | **Severe Timeline Delay**: 930 days elapsed with **+656 days delay past deadline** (peer median duration: 274 days) | **Score: 75/100 (CRITICAL)** |
-| **DEMO-003** | Installation of 120 Solar LED Street Lighting Systems, Lucknow, UP | **Progress/Expenditure Mismatch**: **96.0% funds disbursed (₹48.0 L)** with only **30.0% physical completion** | **Score: 78/100 (CRITICAL)** |
-| **DEMO-004 & DEMO-005** | Community Hall at Village Rampur Kalan vs Cultural Center at Gram Rampur Kalan, Ghaziabad | **Duplicate / Overlapping Scope**: **93% NLP lexical semantic similarity** + located within **0.32 km distance** | **Score: 68/100 (HIGH)** |
-| **DEMO-006** | Storm Water Drainage Network Construction, Agra, UP | **Agency Behavioral Pattern**: Assigned agency (*Agra Rural Engineering Services*) exhibits **55% portfolio delay rate & +18.2% cost overrun** | **Score: 62/100 (HIGH)** |
+| **DEMO-001** | Construction of CC Road from Main Market, Barabanki, UP | **Financial Outlier**: Sanctioned cost (₹85.0 Lakh) is **+240% above peer median** (₹25.0 Lakh) for road works | **Score: 35/100 (MODERATE/HIGH)** |
+| **DEMO-002** | Primary Health Centre Inpatient Wing at Chargawan, Gorakhpur, UP | **Severe Timeline Delay**: Stalled status with **+600+ days delay past target deadline** | **Score: 20/100 (Delay Anomaly)** |
+| **DEMO-003** | Installation of 150 Solar Street Lights, Patna, Bihar | **Progress/Expenditure Mismatch**: **96.25% funds disbursed (₹46.2 L)** with only **30.0% physical completion** | **Score: 20/100 (Progress Gap)** |
+| **DEMO-004 & DEMO-005** | Community Hall at Village Rampur Kalan vs Cultural Center at Gram Rampur Kalan, Ghaziabad | **Potential Duplicate / Overlapping Scope**: **> 70% NLP lexical similarity** + located within **0.38 km distance** | **Score: 15/100 (Duplicate Flag)** |
+| **DEMO-006** | Modernization of Integrated Drainage System, Danapur, Patna | **Agency Behavioral Pattern**: Assigned agency (*DRIC*) exhibits **> 50% portfolio delay rate & cost overrun** | **Score: 20/100 (Agency Pattern)** |
 
 ---
 
 ## 🧠 Multi-Signal Risk Architecture & Weights
 
-Every project is evaluated across 6 weighted risk dimensions:
+Every project is evaluated across 6 strictly bounded, additive dimensions:
 
-1. 💰 **Financial Anomaly Risk (Max 25 pts)**: Identifies projects where unit costs or total sanctioned amounts exceed peer group medians by $> 45\%$, or where disbursements exceed initial technical estimates.
-2. ⏱️ **Timeline Execution Delay Risk (Max 20 pts)**: Identifies works exceeding expected completion dates or peer group execution durations by $> 60$ days.
-3. 📉 **Progress vs Expenditure Divergence Risk (Max 20 pts)**: Flags projects where disbursement percentage exceeds verified physical progress by $> 30\%$.
-4. 📑 **Duplicate & Semantic Overlap Risk (Max 15 pts)**: Computes hybrid n-gram TF-IDF cosine similarity and Jaccard token overlap against all nearby works within a configurable geographic radius ($< 10\text{ km}$).
-5. 📍 **Geospatial Density Clustering Risk (Max 10 pts)**: Detects high-density clustering of redundant works within narrow geographic boundaries ($< 5\text{ km}$).
+1. 💰 **Financial Anomaly Risk (Max 25 pts)**: Identifies projects where unit costs or total sanctioned amounts deviate from hierarchical peer group medians by $> 40\%$, or where disbursements exceed initial technical estimates.
+2. ⏱️ **Timeline Execution Delay Risk (Max 20 pts)**: Identifies works exceeding expected completion dates or peer group execution durations by $> 60$ days, or marked as stalled.
+3. 📉 **Progress vs Expenditure Divergence Risk (Max 20 pts)**: Flags projects where cumulative fund disbursement percentage exceeds verified physical progress by $> 25\%$.
+4. 📑 **Duplicate & Semantic Overlap Risk (Max 15 pts)**: Multi-factor detector combining NLP token cosine similarity, Jaccard n-gram overlap, work type alignment, and Haversine geographic proximity ($\le 10\text{ km}$).
+5. 📍 **Geospatial Density Clustering Risk (Max 10 pts)**: Detects high-density clustering of redundant works within narrow geographic boundaries ($\le 5\text{ km}$).
 6. 🏛️ **Implementing Agency Risk Profile (Max 10 pts)**: Scores systemic historic delay rates, cost overruns, and uncompleted project ratios across agency portfolios.
+
+**Total Score = Financial (25) + Delay (20) + Progress Mismatch (20) + Duplicate (15) + Geospatial (10) + Agency (10) = 100 Maximum.**  
+The total score strictly equals the sum of its 6 explainable dimensions—never a black-box or randomized score.
 
 ---
 
@@ -60,11 +63,12 @@ Every project is evaluated across 6 weighted risk dimensions:
 > [!IMPORTANT]
 > **Decision-Support vs Accusatory Allegations**:  
 > In compliance with administrative audit standards, MPLAD Sentinel **never accuses an agency, contractor, or representative of fraud**.  
-> The system utilizes objective governance terminology:
+> The system strictly utilizes objective governance terminology:
 > - *“Potential anomaly”*
 > - *“Risk indicator”*
 > - *“Requires verification”*
-> - *“Candidate duplicate”*
+> - *“Potential Duplicate”*
+> - *“Overlapping Scope”*
 > - *“Unusual expenditure pattern”*
 > 
 > Outputs are presented as **evidence-backed leads for supervisory officers** (District Magistrates, State Nodal Officers, MoSPI Inspectors).
@@ -76,21 +80,22 @@ Every project is evaluated across 6 weighted risk dimensions:
 ### Prerequisites
 - **Node.js**: v18.0 or newer (v24.x tested)
 - **npm**: v9.0 or newer
+- **OS**: Windows / Linux / macOS (Windows PowerShell supported with `npm.cmd`)
 
 ### 1. Run Automated Test Suite
-Verify all 18 risk engine tests, feature calculations, NLP algorithms, and benchmark records:
+Verify all 29 risk engine tests, hierarchical peer benchmarks, NLP similarity algorithms, risk bounds, and live data quality metrics:
 ```bash
-npm test
+npm.cmd test --prefix backend
 ```
 
 ### 2. Start Full-Stack Application (Backend + Frontend)
-Run both the Express backend (`http://localhost:5000`) and the Vite React frontend (`http://localhost:5173`) with a single command:
+Run both the Express backend (`http://localhost:5000`) and the Vite React frontend (`http://localhost:3000`) with a single command:
 ```bash
-npm run dev
+npm.cmd run dev
 ```
 
 ### 3. Open Web Dashboard
-Navigate to [http://localhost:5173](http://localhost:5173) in your web browser.
+Navigate to [http://localhost:3000](http://localhost:3000) in your web browser.
 
 ---
 
@@ -98,13 +103,14 @@ Navigate to [http://localhost:5173](http://localhost:5173) in your web browser.
 
 | Endpoint | Method | Description |
 | :--- | :--- | :--- |
-| `/api/dashboard/summary` | `GET` | High-level portfolio KPIs, risk counts, and data integrity health |
+| `/api/health` | `GET` | Service health status, uptime, and analyzed project count |
+| `/api/dashboard/summary` | `GET` | High-level portfolio KPIs, risk counts, and live data integrity health |
 | `/api/dashboard/trends` | `GET` | Quarterly trends, sector distribution, and status breakdown |
-| `/api/dashboard/geography` | `GET` | State-wise risk index and all coordinate-mapped markers for Leaflet GIS |
+| `/api/dashboard/geography` | `GET` | State-wise risk index and coordinate-mapped markers for Leaflet GIS |
 | `/api/projects` | `GET` | Filterable project catalog with search, state, sector, and risk level queries |
 | `/api/projects/:id` | `GET` | Complete project dossier with risk breakdown, peer benchmarks, and duplicate matches |
 | `/api/projects/:id/explanation` | `GET` | Structured "Why Flagged?" explainability cards with recommended verification actions |
-| `/api/duplicates` | `GET` | All candidate duplicate pairs with text similarity % and geographic distance |
+| `/api/duplicates` | `GET` | Candidate duplicate pairs with text similarity % and geographic distance |
 | `/api/agencies` | `GET` | Implementing agency portfolio analytics, delay rates, and cost overrun indices |
 | `/api/projects/upload` | `POST` | Multipart CSV ingestion engine with automated field normalization and re-analysis |
 | `/api/analyze` | `POST` | Triggers on-demand full re-analysis across the entire project dataset |
@@ -114,12 +120,16 @@ Navigate to [http://localhost:5173](http://localhost:5173) in your web browser.
 
 ---
 
-## 🧪 Technology Stack
+## 🧪 Genuine Technology Stack
 
 - **Backend**: Node.js, Express, TypeScript, Multer, CSV-Parse.
+- **Statistical & NLP Engine**: Written natively in TypeScript with zero external ML runtime dependencies:
+  - Multi-level hierarchical peer median/percentile analysis with self-exclusion
+  - Hybrid Lexical Token TF & Jaccard similarity
+  - Haversine spherical distance calculation
+  - Deterministic 0–100 bounded additive multi-signal scoring
 - **Frontend**: React 19, TypeScript, Vite, Tailwind CSS v4, Lucide Icons, Recharts, Leaflet, React-Leaflet.
-- **AI & Analytics**: Deterministic Feature Engineering Pipeline, Dynamic Peer Group Statistical Normalization, Hybrid N-Gram & Token Cosine/Jaccard NLP Semantic Similarity, Haversine Spherical Distance Matrix.
-- **Testing**: Native Node.js/TSX test runner with 18 automated validation assertions.
+- **Testing**: Native Node.js/TSX test runner with 29 automated validation assertions.
 
 ---
 
