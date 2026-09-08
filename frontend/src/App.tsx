@@ -32,21 +32,21 @@ export function App() {
     fetchSummary();
   }, []);
 
-  const handleSelectProject = (id: string) => {
-    setSelectedProjectId(id);
+  const handleSelectProject = (projectId: string) => {
+    setSelectedProjectId(projectId);
     setActiveTab('investigation');
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  const handleReAnalyze = async () => {
+  const handleReanalyze = async () => {
     setIsAnalyzing(true);
     try {
-      const updatedSummary = await apiClient.reAnalyze();
-      setSummary(updatedSummary);
-      setNotification('Risk intelligence analysis successfully recomputed across entire dataset.');
+      await apiClient.reAnalyze();
+      await fetchSummary();
+      setNotification('Risk intelligence scoring recalculation completed across portfolio.');
       setTimeout(() => setNotification(null), 4000);
     } catch (err) {
-      console.error('Re-analysis failed:', err);
+      console.error('Re-analysis error:', err);
     } finally {
       setIsAnalyzing(false);
     }
@@ -55,41 +55,38 @@ export function App() {
   const handleResetDemo = async () => {
     setIsAnalyzing(true);
     try {
-      const updatedSummary = await apiClient.resetDemo();
-      setSummary(updatedSummary);
-      setSelectedProjectId('DEMO-001');
-      setNotification('Dataset restored to default Smart India Hackathon 2026 seeded benchmark anomalies (DEMO-001 to DEMO-006).');
+      await apiClient.resetDemo();
+      await fetchSummary();
+      setNotification('Dataset restored to standardized SIH benchmark demonstration data.');
       setTimeout(() => setNotification(null), 4000);
     } catch (err) {
-      console.error('Reset failed:', err);
+      console.error('Reset error:', err);
     } finally {
       setIsAnalyzing(false);
     }
   };
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col selection:bg-teal-500 selection:text-white">
-      {/* Header & Navigation */}
+    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans selection:bg-teal-500 selection:text-slate-950">
+      {/* Top Navigation */}
       <Navbar
         activeTab={activeTab}
         setActiveTab={setActiveTab}
         summary={summary}
-        onReAnalyze={handleReAnalyze}
+        onReAnalyze={handleReanalyze}
         onResetDemo={handleResetDemo}
         isAnalyzing={isAnalyzing}
       />
 
-      {/* Temporary Toast Banner */}
+      {/* Global Notification Banner */}
       {notification && (
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-4">
-          <div className="p-3.5 rounded-xl bg-teal-950/80 border border-teal-500/50 text-xs text-teal-200 flex items-center justify-between shadow-lg">
-            <div className="flex items-center gap-2">
-              <CheckCircle2 className="w-4 h-4 text-teal-400 shrink-0" />
-              <span>{notification}</span>
-            </div>
+        <div className="bg-teal-500/10 border-b border-teal-500/30 px-4 py-2 text-xs text-teal-300 flex items-center justify-between">
+          <div className="max-w-7xl mx-auto flex items-center gap-2 w-full">
+            <CheckCircle2 className="w-4 h-4 text-teal-400 shrink-0" />
+            <span>{notification}</span>
             <button
               onClick={() => setNotification(null)}
-              className="text-slate-400 hover:text-slate-200 text-xs font-bold"
+              className="text-slate-400 hover:text-slate-200 text-xs font-bold ml-auto"
             >
               ✕
             </button>
@@ -110,7 +107,11 @@ export function App() {
         {activeTab === 'investigation' && (
           <InvestigationView
             projectId={selectedProjectId}
-            onSelectProject={(id) => setSelectedProjectId(id)}
+            onSelectProject={(id: string) => setSelectedProjectId(id)}
+            onOpenDuplicatePair={(pA: string) => {
+              setSelectedProjectId(pA);
+              setActiveTab('duplicates');
+            }}
           />
         )}
 
@@ -150,27 +151,16 @@ export function App() {
         )}
       </main>
 
-      {/* Footer & Disclaimer */}
-      <footer className="bg-slate-950 border-t border-slate-900 py-8 px-4 sm:px-6 lg:px-8 mt-auto text-xs text-slate-500">
-        <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
-          <div className="space-y-1 text-center md:text-left">
-            <div className="flex items-center justify-center md:justify-start gap-2">
-              <span className="font-extrabold text-slate-300">MPLAD SENTINEL</span>
-              <span>•</span>
-              <span className="text-teal-400 font-semibold">SIH 2026 Problem Statement PS 26102</span>
-            </div>
-            <p className="text-[11px] text-slate-500">
-              AI-Powered Risk Intelligence, Anomaly Detection & Decision-Support System for MPLADS Implementation
-            </p>
-          </div>
-
-          <div className="p-2.5 rounded-lg bg-slate-900/60 border border-slate-800 text-[10px] text-slate-400 max-w-lg leading-tight text-center md:text-left">
-            <strong className="text-slate-300">Governance & Decision-Support Policy:</strong> Algorithmic scores reflect statistical risk indicators and deviation signals requiring field verification. Anomaly alerts assist supervisory officers and do not constitute definitive findings of non-compliance.
-          </div>
+      {/* Footer */}
+      <footer className="bg-slate-900/60 border-t border-slate-800/80 py-4 text-center text-xs text-slate-500">
+        <div className="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-2">
+          <span>MPLAD Sentinel &bull; PS 26102 AI-Powered Risk Intelligence Platform &bull; SIH 2026</span>
+          <span className="text-[11px] text-slate-400">
+            Operating Philosophy: <strong className="text-teal-400 font-normal">Detect &rarr; Assess &rarr; Explain &rarr; Prioritize &rarr; Investigate</strong> (Risk &ne; Guilt)
+          </span>
         </div>
       </footer>
     </div>
   );
 }
-
 export default App;

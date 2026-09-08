@@ -7,10 +7,18 @@ export interface RiskBreakdown {
   duplicate_risk: number;
   geospatial_risk: number;
   agency_risk: number;
+
+  financial_anomaly_score?: number;
+  delay_anomaly_score?: number;
+  progress_mismatch_score?: number;
+  duplicate_risk_score?: number;
+  geospatial_risk_score?: number;
+  agency_risk_score?: number;
 }
 
 export interface AnomalyEvidence {
-  anomaly_type: 'Financial Anomaly' | 'Delay Anomaly' | 'Progress Mismatch' | 'Duplicate Candidate' | 'Geospatial Anomaly' | 'Agency Behavioral Pattern';
+  id?: string;
+  anomaly_type: 'Financial Anomaly' | 'Delay Anomaly' | 'Progress Mismatch' | 'Duplicate Candidate' | 'Geospatial Anomaly' | 'Agency Behavioral Pattern' | 'ML Anomaly Signal' | string;
   severity: 'LOW' | 'MODERATE' | 'HIGH' | 'CRITICAL';
   metric: string;
   observed_value: string | number;
@@ -50,6 +58,13 @@ export interface DuplicateMatch {
   reasons: string[];
 }
 
+export interface MLUnusualCharacteristic {
+  metric: string;
+  observed: string;
+  deviation: string;
+  description: string;
+}
+
 export interface Project {
   project_id: string;
   work_name: string;
@@ -66,7 +81,7 @@ export interface Project {
   start_date: string;
   expected_completion_date: string;
   completion_date?: string | null;
-  status: 'Sanctioned' | 'In Progress' | 'Delayed' | 'Completed' | 'Stalled';
+  status: 'Sanctioned' | 'In Progress' | 'Delayed' | 'Completed' | 'Stalled' | string;
   physical_progress_percentage: number;
   implementing_agency: string;
   latitude: number;
@@ -81,6 +96,13 @@ export interface Project {
   evidences: AnomalyEvidence[];
   peer_benchmark: PeerBenchmark;
   duplicate_candidates: DuplicateMatch[];
+  created_at?: string;
+  // ML signals
+  ml_anomaly_score?: number;
+  ml_anomaly_percentile?: number;
+  is_ml_anomaly?: boolean;
+  ml_unusual_characteristics?: MLUnusualCharacteristic[];
+  ml_status?: 'ACTIVE' | 'FALLBACK';
 }
 
 export interface DataQualitySummary {
@@ -93,6 +115,17 @@ export interface DataQualitySummary {
   missing_required_fields_count: number;
   data_integrity_score_pct: number;
   last_analyzed_at: string;
+}
+
+export interface MLEngineInfo {
+  isolation_forest_status: 'Active' | 'Fallback';
+  sentence_transformers_status: 'Active' | 'Fallback';
+  peer_benchmarking_status: 'Active';
+  rule_engine_status: 'Active';
+  model_version: string;
+  training_records: number;
+  ml_anomalies_count: number;
+  duplicate_candidates_count: number;
 }
 
 export interface DashboardSummary {
@@ -112,6 +145,7 @@ export interface DashboardSummary {
   progress_mismatch_count: number;
   financial_anomaly_count: number;
   data_quality: DataQualitySummary;
+  ml_engine?: MLEngineInfo;
 }
 
 export interface AgencyMetrics {

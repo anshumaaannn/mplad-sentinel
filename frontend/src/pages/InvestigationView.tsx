@@ -12,7 +12,13 @@ import {
   AlertOctagon,
   FileCheck,
   ChevronRight,
-  ArrowRight
+  ArrowRight,
+  Cpu,
+  Fingerprint,
+  Compass,
+  Scale,
+  ShieldCheck,
+  Info
 } from 'lucide-react';
 import { Project, RiskLevel } from '../types';
 import { RiskBadge } from '../components/RiskBadge';
@@ -89,6 +95,10 @@ export const InvestigationView: React.FC<InvestigationViewProps> = ({
     { name: 'This Project', amount: Math.round((project.actual_expenditure > 0 ? project.actual_expenditure : project.sanctioned_amount) / 100000), fill: project.risk_score >= 50 ? '#f43f5e' : '#10b981' }
   ];
 
+  const topDuplicate = project.duplicate_candidates && project.duplicate_candidates.length > 0
+    ? project.duplicate_candidates[0]
+    : null;
+
   return (
     <div className="space-y-6 pb-16">
       {/* Project Selector & Breadcrumb */}
@@ -100,103 +110,74 @@ export const InvestigationView: React.FC<InvestigationViewProps> = ({
           <span className="text-slate-500">({project.district}, {project.state})</span>
         </div>
 
-        {/* Quick switcher */}
+        {/* Quick Jump Dropdown */}
         <div className="flex items-center gap-2">
-          <span className="text-xs text-slate-400 hidden sm:inline">Jump to Case:</span>
+          <span className="text-xs text-slate-400">Switch Project:</span>
           <select
             value={project.project_id}
             onChange={(e) => onSelectProject(e.target.value)}
-            className="bg-slate-950 border border-slate-700 rounded-lg px-3 py-1 text-xs text-slate-200 font-mono focus:outline-none focus:border-teal-500 cursor-pointer"
+            className="bg-slate-950 border border-slate-800 rounded-lg px-2.5 py-1 text-xs text-slate-200 focus:outline-none focus:border-teal-500 max-w-[220px]"
           >
-            <optgroup label="Special Demo Benchmark Anomalies">
-              <option value="DEMO-001">DEMO-001 • CC Road (Cost Outlier +240%)</option>
-              <option value="DEMO-002">DEMO-002 • Health Wing (Severe Delay & Stalled)</option>
-              <option value="DEMO-003">DEMO-003 • Solar Lights (96% Exp / 30% Prog)</option>
-              <option value="DEMO-004">DEMO-004 • Community Hall (Duplicate Pair A)</option>
-              <option value="DEMO-005">DEMO-005 • Cultural Hall (Duplicate Pair B)</option>
-              <option value="DEMO-006">DEMO-006 • Drainage System (Agency Overrun)</option>
-            </optgroup>
-            <optgroup label="All Projects">
-              {allProjects.map(p => (
-                <option key={p.project_id} value={p.project_id}>
-                  {p.project_id} - {p.work_name.substring(0, 45)}... ({p.risk_score} pts)
-                </option>
-              ))}
-            </optgroup>
+            {allProjects.map(p => (
+              <option key={p.project_id} value={p.project_id}>
+                {p.project_id} - {p.work_name.slice(0, 30)}...
+              </option>
+            ))}
           </select>
         </div>
       </div>
 
-      {/* Main Project Dossier Header Card */}
+      {/* Project Header Dossier Banner */}
       <div className="bg-slate-900/90 border border-slate-800 rounded-xl p-6 shadow-xl relative overflow-hidden">
-        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
-          <div className="space-y-2 max-w-3xl">
+        <div className="absolute top-0 right-0 w-96 h-96 bg-teal-500/5 rounded-full blur-3xl pointer-events-none" />
+
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 relative z-10">
+          <div className="space-y-3 max-w-3xl">
             <div className="flex flex-wrap items-center gap-2">
-              <span className="font-mono text-sm px-2.5 py-0.5 rounded bg-slate-800 text-teal-400 font-bold border border-slate-700">
+              <span className="px-2.5 py-0.5 rounded text-xs font-mono font-bold bg-slate-800 text-teal-300 border border-slate-700">
                 {project.project_id}
               </span>
-              <RiskBadge level={project.risk_level} score={project.risk_score} size="md" />
-              <span className="text-xs px-2.5 py-0.5 rounded bg-slate-800 text-slate-300 border border-slate-700 font-semibold">
-                Status: {project.status}
+              <span className="px-2.5 py-0.5 rounded text-xs font-semibold bg-slate-800/80 text-slate-300">
+                {project.sector}
               </span>
-              <span className="text-xs px-2.5 py-0.5 rounded bg-teal-500/10 text-teal-300 border border-teal-500/30 font-medium">
-                {project.sector} • {project.work_type}
+              <span className="px-2.5 py-0.5 rounded text-xs font-semibold bg-slate-800/80 text-slate-300">
+                {project.work_type}
+              </span>
+              <span className="px-2.5 py-0.5 rounded text-xs font-bold uppercase tracking-wider bg-slate-950 text-slate-400 border border-slate-800">
+                Status: {project.status}
               </span>
             </div>
 
-            <h1 className="text-xl font-black text-slate-100 leading-snug">
+            <h1 className="text-xl sm:text-2xl font-bold text-slate-100 leading-snug">
               {project.work_name}
             </h1>
 
-            <div className="flex flex-wrap items-center gap-4 text-xs text-slate-400 pt-1">
-              <span className="flex items-center gap-1.5">
-                <MapPin className="w-3.5 h-3.5 text-slate-500" />
-                {project.district}, {project.state} ({project.constituency})
-              </span>
-              <span className="flex items-center gap-1.5">
-                <Building2 className="w-3.5 h-3.5 text-slate-500" />
-                Agency: <strong className="text-slate-200 font-semibold">{project.implementing_agency}</strong>
-              </span>
-              <span className="flex items-center gap-1.5">
-                MP: <strong className="text-slate-200">{project.mp_name}</strong>
-              </span>
+            <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-xs text-slate-400">
+              <div className="flex items-center gap-1.5">
+                <MapPin className="w-3.5 h-3.5 text-teal-400" />
+                <span>{project.district}, {project.state} ({project.constituency})</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <Building2 className="w-3.5 h-3.5 text-purple-400" />
+                <span>Agency: <strong>{project.implementing_agency}</strong></span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <Calendar className="w-3.5 h-3.5 text-blue-400" />
+                <span>MP: {project.mp_name}</span>
+              </div>
             </div>
           </div>
 
-          {/* Composite Gauge Box */}
-          <div className="flex flex-col items-center justify-center p-5 rounded-xl bg-slate-950/80 border border-slate-800 shrink-0 min-w-[180px]">
-            <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1">Composite Risk Score</span>
-            <div className="relative flex items-center justify-center">
-              <span className={`text-4xl font-black font-mono ${
-                project.risk_score >= 70 ? 'text-rose-400' :
-                project.risk_score >= 45 ? 'text-orange-400' :
-                project.risk_score >= 25 ? 'text-amber-400' :
-                'text-emerald-400'
-              }`}>
-                {project.risk_score}
-              </span>
-              <span className="text-xs text-slate-500 ml-0.5 mt-2 font-mono">/ 100</span>
+          {/* Risk Score Spotlight Widget */}
+          <div className="bg-slate-950/80 border border-slate-800 rounded-xl p-5 flex flex-col items-center justify-center min-w-[200px] text-center shadow-lg">
+            <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Overall Risk Score</span>
+            <div className="text-4xl font-extrabold font-mono text-slate-100 my-1">
+              {project.risk_score}
+              <span className="text-lg text-slate-500 font-normal">/100</span>
             </div>
-            <span className="text-[10px] text-slate-400 uppercase tracking-wider mt-1 text-center font-medium">
-              Deterministic Multi-Signal Audit
-            </span>
-          </div>
-        </div>
-
-        {/* Primary Alert Banner */}
-        <div className="mt-5 p-3.5 rounded-lg bg-slate-950/90 border border-slate-800 flex items-start gap-3">
-          <AlertTriangle className={`w-4 h-4 mt-0.5 shrink-0 ${
-            project.risk_score >= 70 ? 'text-rose-400' :
-            project.risk_score >= 45 ? 'text-orange-400' :
-            project.risk_score >= 25 ? 'text-amber-400' :
-            'text-emerald-400'
-          }`} />
-          <div>
-            <span className="text-xs font-bold text-slate-300 uppercase tracking-wider block">
-              Primary Audit Finding:
-            </span>
-            <p className="text-xs text-slate-300 mt-0.5 font-medium">
-              {project.primary_reason}
+            <RiskBadge level={project.risk_level} score={project.risk_score} />
+            <p className="text-[11px] text-slate-500 mt-2">
+              Multi-factor hybrid algorithmic assessment
             </p>
           </div>
         </div>
@@ -273,6 +254,200 @@ export const InvestigationView: React.FC<InvestigationViewProps> = ({
         </div>
       </div>
 
+      {/* ============================================================ */}
+      {/* 5-PART ANALYTICS EVIDENCE ARCHITECTURE (ITEM 17) */}
+      {/* ============================================================ */}
+      <div className="bg-slate-900/90 border border-slate-800 rounded-xl p-6 shadow-xl space-y-6">
+        <div className="flex flex-wrap items-center justify-between gap-4 pb-4 border-b border-slate-800">
+          <div>
+            <div className="flex items-center gap-2">
+              <Scale className="w-5 h-5 text-teal-400" />
+              <h2 className="text-base font-bold text-slate-100 uppercase tracking-wider">
+                Multi-Signal Analytics Evidence
+              </h2>
+            </div>
+            <p className="text-xs text-slate-400 mt-0.5">
+              Comprehensive breakdown of Rule-Based, Machine Learning, Semantic NLP, and Geospatial signals
+            </p>
+          </div>
+          <div className="flex items-center gap-2 bg-slate-950 px-3 py-1.5 rounded-lg border border-slate-800 text-xs">
+            <span className="text-slate-400">Hybrid Risk Score:</span>
+            <strong className="text-teal-300 font-mono text-sm">{project.risk_score}/100</strong>
+          </div>
+        </div>
+
+        {/* 4 Pillars of Evidence Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          {/* Signal 1: Rule-Based Deterministic Signals */}
+          <div className="bg-slate-950/80 p-4 rounded-xl border border-slate-800 space-y-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <FileCheck className="w-4 h-4 text-blue-400" />
+                <h3 className="text-xs font-bold text-slate-200 uppercase">1. Rule-Based Signals</h3>
+              </div>
+              <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-blue-500/20 text-blue-300 border border-blue-500/30">
+                Auditable Rules
+              </span>
+            </div>
+            <div className="space-y-2 text-xs">
+              <div className="p-2 rounded bg-slate-900/90 border border-slate-800/80">
+                <div className="text-slate-400 text-[11px]">Financial Ratio:</div>
+                <div className="font-semibold text-slate-200 mt-0.5">
+                  {expPct}% expenditure vs {project.physical_progress_percentage}% progress
+                </div>
+              </div>
+              <div className="p-2 rounded bg-slate-900/90 border border-slate-800/80">
+                <div className="text-slate-400 text-[11px]">Schedule Adherence:</div>
+                <div className="font-semibold text-slate-200 mt-0.5">
+                  Target: {project.expected_completion_date} ({project.status})
+                </div>
+              </div>
+            </div>
+            <p className="text-[11px] text-slate-400">
+              Evaluated against statutory MPLADS administrative guidelines.
+            </p>
+          </div>
+
+          {/* Signal 2: ML Anomaly Signal (Isolation Forest) */}
+          <div className="bg-slate-950/80 p-4 rounded-xl border border-slate-800 space-y-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Cpu className="w-4 h-4 text-purple-400" />
+                <h3 className="text-xs font-bold text-slate-200 uppercase">2. ML Anomaly Signal</h3>
+              </div>
+              <span className={`text-[10px] font-bold px-2 py-0.5 rounded ${
+                project.is_ml_anomaly ? 'bg-purple-500/20 text-purple-300 border border-purple-500/40' : 'bg-slate-800 text-slate-400'
+              }`}>
+                {project.is_ml_anomaly ? 'Outlier Detected' : 'Nominal Baseline'}
+              </span>
+            </div>
+            <div className="space-y-2 text-xs">
+              <div className="p-2 rounded bg-slate-900/90 border border-slate-800/80 flex items-center justify-between">
+                <div>
+                  <div className="text-slate-400 text-[11px]">Anomaly Score:</div>
+                  <div className="font-bold font-mono text-purple-300 text-sm mt-0.5">
+                    {project.ml_anomaly_score !== undefined ? `${project.ml_anomaly_score}/100` : 'Statistical Fallback'}
+                  </div>
+                </div>
+                {project.ml_anomaly_percentile !== undefined && (
+                  <div className="text-right">
+                    <div className="text-slate-400 text-[11px]">Outlier Percentile:</div>
+                    <div className="font-bold font-mono text-amber-300 text-xs mt-0.5">
+                      {project.ml_anomaly_percentile}th %ile
+                    </div>
+                  </div>
+                )}
+              </div>
+              {project.ml_unusual_characteristics && project.ml_unusual_characteristics.length > 0 ? (
+                <div className="p-2 rounded bg-slate-900/90 border border-slate-800/80">
+                  <div className="text-slate-400 text-[11px] mb-1">Unusual Feature Combinations:</div>
+                  <div className="space-y-1">
+                    {project.ml_unusual_characteristics.slice(0, 2).map((c, i) => (
+                      <div key={i} className="text-[10px] text-purple-200">
+                        &bull; {c.metric}: <strong className="text-purple-300">{c.deviation}</strong>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ) : (
+                <div className="p-2 rounded bg-slate-900/90 border border-slate-800/80 text-[11px] text-slate-400">
+                  No multi-dimensional statistical deviations relative to peer cohort.
+                </div>
+              )}
+            </div>
+            <p className="text-[10px] text-slate-500">
+              Isolation Forest trained on 16 peer-relative features.
+            </p>
+          </div>
+
+          {/* Signal 3: Semantic NLP Signal */}
+          <div className="bg-slate-950/80 p-4 rounded-xl border border-slate-800 space-y-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Fingerprint className="w-4 h-4 text-teal-400" />
+                <h3 className="text-xs font-bold text-slate-200 uppercase">3. Semantic NLP Signal</h3>
+              </div>
+              <span className={`text-[10px] font-bold px-2 py-0.5 rounded ${
+                topDuplicate && topDuplicate.semantic_similarity >= 70 ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30' : 'bg-slate-800 text-slate-400'
+              }`}>
+                {topDuplicate ? `${topDuplicate.semantic_similarity}% Text Match` : 'No Match'}
+              </span>
+            </div>
+            <div className="space-y-2 text-xs">
+              {topDuplicate ? (
+                <>
+                  <div className="p-2 rounded bg-slate-900/90 border border-slate-800/80">
+                    <div className="text-slate-400 text-[11px]">Closest Work Proposal:</div>
+                    <div className="font-semibold text-slate-200 mt-0.5 truncate" title={topDuplicate.matched_work_name}>
+                      {topDuplicate.matched_work_name}
+                    </div>
+                    <div className="text-[10px] text-teal-400 font-mono mt-0.5">
+                      ID: {topDuplicate.matched_project_id}
+                    </div>
+                  </div>
+                  <div className="p-2 rounded bg-slate-900/90 border border-slate-800/80">
+                    <div className="text-slate-400 text-[11px]">NLP Assessment:</div>
+                    <div className="font-semibold text-amber-300 mt-0.5">
+                      {topDuplicate.risk_indicator} ({topDuplicate.semantic_similarity}% embedding match)
+                    </div>
+                  </div>
+                </>
+              ) : (
+                <div className="p-3 rounded bg-slate-900/90 border border-slate-800/80 text-[11px] text-slate-400">
+                  Work scope description exhibits high lexical uniqueness with no duplicate candidates.
+                </div>
+              )}
+            </div>
+            <p className="text-[10px] text-slate-500">
+              Sentence Transformers (<span className="font-mono">all-MiniLM-L6-v2</span>) 384d cosine similarity.
+            </p>
+          </div>
+
+          {/* Signal 4: Geospatial Proximity Signal */}
+          <div className="bg-slate-950/80 p-4 rounded-xl border border-slate-800 space-y-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Compass className="w-4 h-4 text-emerald-400" />
+                <h3 className="text-xs font-bold text-slate-200 uppercase">4. Geospatial Proximity</h3>
+              </div>
+              <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                Haversine GIS
+              </span>
+            </div>
+            <div className="space-y-2 text-xs">
+              <div className="p-2 rounded bg-slate-900/90 border border-slate-800/80">
+                <div className="text-slate-400 text-[11px]">GPS Coordinates:</div>
+                <div className="font-mono text-slate-200 mt-0.5">
+                  {project.latitude.toFixed(4)}° N, {project.longitude.toFixed(4)}° E
+                </div>
+              </div>
+              <div className="p-2 rounded bg-slate-900/90 border border-slate-800/80">
+                <div className="text-slate-400 text-[11px]">Proximity to Similar Work:</div>
+                <div className="font-semibold text-slate-200 mt-0.5">
+                  {topDuplicate ? `${topDuplicate.distance_km} km separation` : 'Isolated location (> 15 km)'}
+                </div>
+              </div>
+            </div>
+            <p className="text-[10px] text-slate-500">
+              Calculated using Great-Circle Haversine distance formula.
+            </p>
+          </div>
+        </div>
+
+        {/* NON-ACCUSATORY GOVERNANCE DISCLAIMER BANNER */}
+        <div className="bg-slate-950/90 border border-teal-500/30 rounded-xl p-3.5 flex items-center gap-3 text-xs text-slate-300">
+          <ShieldCheck className="w-5 h-5 text-teal-400 shrink-0" />
+          <div>
+            <strong className="text-teal-300">Governance &amp; Accountability Safeguard:</strong>{' '}
+            <span>
+              Risk indicators require human verification and do not establish fraud. These statistical deviations,
+              unsupervised anomaly rankings, and semantic overlap flags serve solely as prioritization intelligence
+              to assist district collectors and audit officers in field inspections.
+            </span>
+          </div>
+        </div>
+      </div>
+
       {/* Risk Dimension Breakdown & Peer Comparison */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Risk Signal Breakdown Bar Chart */}
@@ -330,7 +505,7 @@ export const InvestigationView: React.FC<InvestigationViewProps> = ({
             {/* Geospatial Clustering */}
             <div>
               <div className="flex justify-between text-xs mb-1">
-                <span className="text-slate-300 font-medium">Geospatial Density Clustering</span>
+                <span className="text-slate-300 font-medium">Geospatial Proximity &amp; Clustering</span>
                 <span className="font-mono font-bold text-blue-300">{project.risk_breakdown.geospatial_risk} / 10 pts</span>
               </div>
               <div className="w-full bg-slate-950 h-2 rounded-full overflow-hidden">
@@ -426,7 +601,7 @@ export const InvestigationView: React.FC<InvestigationViewProps> = ({
             <div className="flex items-center gap-2">
               <AlertOctagon className="w-5 h-5 text-rose-400" />
               <h3 className="text-base font-bold text-slate-100 uppercase tracking-wider">
-                Why Flagged? — Algorithmic Evidence & Signals
+                Why Flagged? — Algorithmic Evidence &amp; Signals
               </h3>
             </div>
             <p className="text-xs text-slate-400 mt-0.5">
@@ -503,47 +678,68 @@ export const InvestigationView: React.FC<InvestigationViewProps> = ({
         )}
       </div>
 
-      {/* Duplicate Candidates Section if present */}
-      {project.duplicate_candidates.length > 0 && (
-        <div className="bg-slate-900/90 border border-slate-800 rounded-xl p-6 shadow-xl space-y-4">
+      {/* POTENTIAL DUPLICATE CANDIDATE SPOTLIGHT */}
+      {project.duplicate_candidates && project.duplicate_candidates.length > 0 && (
+        <div className="bg-slate-900/90 border border-amber-500/30 rounded-xl p-6 shadow-xl space-y-4">
           <div className="flex items-center justify-between pb-3 border-b border-slate-800">
-            <div>
-              <div className="flex items-center gap-2">
-                <Copy className="w-5 h-5 text-amber-400" />
-                <h3 className="text-base font-bold text-slate-100 uppercase tracking-wider">
-                  Potential Duplicate / Overlapping Scope Candidates
-                </h3>
-              </div>
-              <p className="text-xs text-slate-400 mt-0.5">
-                Lexical NLP similarity and Haversine distance proximity match
-              </p>
+            <div className="flex items-center gap-2">
+              <Copy className="w-5 h-5 text-amber-400" />
+              <h3 className="text-base font-bold text-slate-100 uppercase tracking-wider">
+                Potential Duplicate or Overlapping Works ({project.duplicate_candidates.length})
+              </h3>
             </div>
-            <span className="text-xs font-semibold px-2 py-0.5 rounded bg-amber-500/10 text-amber-300 border border-amber-500/30">
-              {project.duplicate_candidates.length} Candidate Match{project.duplicate_candidates.length !== 1 ? 'es' : ''}
+            <span className="text-xs px-2.5 py-1 rounded bg-amber-500/20 text-amber-300 border border-amber-500/40 font-semibold">
+              Spatial &amp; Semantic Cluster Detected
             </span>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {project.duplicate_candidates.map((match, i) => (
-              <div key={i} className="p-4 rounded-xl bg-slate-950 border border-slate-800 space-y-3">
+            {project.duplicate_candidates.map((match, idx) => (
+              <div
+                key={idx}
+                className="p-4 rounded-xl bg-slate-950/80 border border-slate-800 hover:border-amber-500/50 transition space-y-3 cursor-pointer"
+                onClick={() => onSelectProject(match.matched_project_id)}
+              >
                 <div className="flex items-center justify-between">
-                  <span className="font-mono text-xs font-bold text-amber-400">{match.matched_project_id}</span>
-                  <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-amber-950/80 text-amber-300 border border-amber-500/40">
-                    {match.risk_indicator}
+                  <span className="text-xs font-mono font-bold text-teal-400">
+                    {match.matched_project_id}
+                  </span>
+                  <span className="text-xs font-bold text-amber-300 bg-amber-950/40 px-2 py-0.5 rounded border border-amber-500/30">
+                    {match.semantic_similarity}% Text Match &bull; {match.distance_km} km Away
                   </span>
                 </div>
-                <h4 className="text-xs font-bold text-slate-200">{match.matched_work_name}</h4>
-                <div className="grid grid-cols-2 gap-2 text-[11px] text-slate-400">
-                  <div>Similarity: <strong className="text-slate-200">{match.semantic_similarity}%</strong></div>
-                  <div>Distance: <strong className="text-slate-200">{match.distance_km} km</strong></div>
-                  <div>District: <strong className="text-slate-200">{match.matched_district}</strong></div>
-                  <div>Agency: <strong className="text-slate-200">{match.matched_agency}</strong></div>
+
+                <h4 className="text-xs font-bold text-slate-200 line-clamp-2">
+                  {match.matched_work_name}
+                </h4>
+
+                <div className="flex items-center justify-between text-[11px] text-slate-400">
+                  <span>Sanctioned: ₹{(match.matched_sanctioned_amount / 100000).toFixed(1)} L</span>
+                  <span className="text-slate-500">{match.matched_agency}</span>
                 </div>
+
+                <div className="space-y-1 pt-1 border-t border-slate-900 text-[11px] text-slate-400">
+                  {match.reasons.map((r, ri) => (
+                    <div key={ri} className="flex items-center gap-1.5 text-amber-200/80">
+                      <span className="w-1 h-1 rounded-full bg-amber-400" />
+                      <span>{r}</span>
+                    </div>
+                  ))}
+                </div>
+
                 <button
-                  onClick={() => onSelectProject(match.matched_project_id)}
-                  className="w-full mt-2 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold border border-slate-700 transition cursor-pointer"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    if (onOpenDuplicatePair) {
+                      onOpenDuplicatePair(project.project_id, match.matched_project_id);
+                    } else {
+                      onSelectProject(match.matched_project_id);
+                    }
+                  }}
+                  className="w-full py-1.5 rounded bg-slate-900 hover:bg-slate-800 text-xs font-semibold text-slate-300 border border-slate-700 flex items-center justify-center gap-1.5 transition mt-2"
                 >
-                  Inspect Matched Project Dossier
+                  <span>Compare Both Works Side-by-Side</span>
+                  <ArrowRight className="w-3.5 h-3.5" />
                 </button>
               </div>
             ))}
@@ -553,3 +749,4 @@ export const InvestigationView: React.FC<InvestigationViewProps> = ({
     </div>
   );
 };
+

@@ -1,10 +1,18 @@
-import { Project, EnrichedProject, ProjectRiskAnalysis, RiskLevel } from '../types/project.js';
-import { generateSyntheticProjects, exportProjectsToCSV } from '../data/syntheticDataGenerator.js';
+import {
+  Project,
+  EnrichedProject,
+  ProjectRiskAnalysis,
+  RiskLevel,
+  DuplicateMatch
+} from '../types/project.js';
+import { generateSyntheticProjects } from '../data/syntheticDataGenerator.js';
 import { FeatureEngineeringService, EngineeredFeatures } from './featureEngineering.service.js';
 import { PeerBenchmarkingService, PeerGroupStats } from './peerBenchmarking.service.js';
 import { AgencyAnalyticsService, AgencyMetrics } from './agencyAnalytics.service.js';
 import { RiskScoringService } from './riskScoring.service.js';
-import * as path from 'path';
+import { MLClientService, MLAnomalyResult, MLBatchResponse } from './mlClient.service.js';
+import fs from 'fs';
+import path from 'path';
 
 export interface DataQualitySummary {
   total_projects: number;
@@ -16,6 +24,17 @@ export interface DataQualitySummary {
   missing_required_fields_count: number;
   data_integrity_score_pct: number;
   last_analyzed_at: string;
+}
+
+export interface MLEngineInfo {
+  isolation_forest_status: 'Active' | 'Fallback';
+  sentence_transformers_status: 'Active' | 'Fallback';
+  peer_benchmarking_status: 'Active';
+  rule_engine_status: 'Active';
+  model_version: string;
+  training_records: number;
+  ml_anomalies_count: number;
+  duplicate_candidates_count: number;
 }
 
 export interface DashboardSummary {
@@ -35,6 +54,7 @@ export interface DashboardSummary {
   progress_mismatch_count: number;
   financial_anomaly_count: number;
   data_quality: DataQualitySummary;
+  ml_engine?: MLEngineInfo;
 }
 
 export class StorageService {
@@ -45,7 +65,10 @@ export class StorageService {
   private static peerGroups: Map<string, PeerGroupStats> = new Map();
   private static agencyProfiles: Map<string, AgencyMetrics> = new Map();
   private static isInitialized = false;
+  private static isMLActive = false;
   private static lastAnalyzedAt: string = new Date().toISOString();
+  private static mlAnomalyMap: Map<string, MLAnomalyResult> = new Map();
+  private static mlDuplicateCandidates: Map<string, DuplicateMatch[]> = new Map();
 
   public static initialize(): void {
     if (this.isInitialized) return;
@@ -58,14 +81,130 @@ export class StorageService {
     // Also persist demo CSV to data folder
     const csvPath = path.resolve(process.cwd(), '../data/demo_projects.csv');
     try {
-      exportProjectsToCSV(generated, csvPath);
+      if (!fs.existsSync(path.dirname(csvPath))) {
+        fs.mkdirSync(path.dirname(csvPath), { recursive: true });
+      }
+      const header = 'project_id,work_name,sector,work_type,state,district,constituency,mp_name,sanction_date,start_date,expected_completion_date,completion_date,status,sanctioned_amount,estimated_cost,actual_expenditure,physical_progress_percentage,implementing_agency,beneficiary_count,latitude,longitude\n';
+      const rows = generated.map(p =>
+        `"${p.project_id}","${p.work_name.replace(/"/g, '""')}","${p.sector}","${p.work_type}","${p.state}","${p.district}","${p.constituency}","${p.mp_name}","${p.sanction_date}","${p.start_date}","${p.expected_completion_date}","${p.completion_date || ''}","${p.status}",${p.sanctioned_amount},${p.estimated_cost},${p.actual_expenditure},${p.physical_progress_percentage},"${p.implementing_agency}",${p.beneficiary_count},${p.latitude},${p.longitude}`
+      ).join('\n');
+      fs.writeFileSync(csvPath, header + rows, 'utf8');
       console.log(`[StorageService] Exported demo dataset to ${csvPath}`);
-    } catch (e) {
-      console.warn('[StorageService] Could not write demo CSV file:', e);
+    } catch {
+      // Ignore write errors if running in constrained container
     }
 
     this.runFullAnalysis();
     this.isInitialized = true;
+
+    // Trigger asynchronous ML analytics pass in the background
+    this.triggerMLAnalysis().catch(err => {
+      console.warn('[StorageService] Background ML pass initialized in fallback mode:', err.message);
+    });
+  }
+
+  public static async triggerMLAnalysis(): Promise<void> {
+    try {
+      const mlResponse = await MLClientService.analyzeProjects(this.projects);
+      if (mlResponse && mlResponse.success) {
+        this.isMLActive = true;
+        this.applyMLResults(mlResponse);
+        console.log(`[StorageService] Applied Python ML signals to ${this.projects.length} projects (ML Active)`);
+      } else {
+        this.isMLActive = false;
+        console.log('[StorageService] Python ML service not active — running rule/statistical fallback.');
+      }
+    } catch (err: any) {
+      this.isMLActive = false;
+      console.warn('[StorageService] ML analysis fallback:', err.message);
+    }
+  }
+
+  private static applyMLResults(mlResponse: MLBatchResponse): void {
+    this.mlAnomalyMap.clear();
+    this.mlDuplicateCandidates.clear();
+
+    if (mlResponse.anomalies) {
+      for (const [id, res] of Object.entries(mlResponse.anomalies)) {
+        this.mlAnomalyMap.set(id, res);
+      }
+    }
+
+    if (mlResponse.duplicate_pairs) {
+      for (const pair of mlResponse.duplicate_pairs) {
+        const p1Id = pair.projectA.project_id;
+        const p2Id = pair.projectB.project_id;
+
+        const matchForP1: DuplicateMatch = {
+          matched_project_id: p2Id,
+          matched_work_name: pair.projectB.work_name,
+          matched_district: pair.projectB.district,
+          matched_agency: pair.projectB.implementing_agency,
+          matched_sanctioned_amount: pair.projectB.sanctioned_amount,
+          semantic_similarity: pair.similarity,
+          distance_km: pair.distance_km,
+          risk_indicator: pair.risk_indicator,
+          reasons: pair.reasons
+        };
+
+        const existingP1 = this.mlDuplicateCandidates.get(p1Id) || [];
+        existingP1.push(matchForP1);
+        this.mlDuplicateCandidates.set(p1Id, existingP1);
+
+        const matchForP2: DuplicateMatch = {
+          matched_project_id: p1Id,
+          matched_work_name: pair.projectA.work_name,
+          matched_district: pair.projectA.district,
+          matched_agency: pair.projectA.implementing_agency,
+          matched_sanctioned_amount: pair.projectA.sanctioned_amount,
+          semantic_similarity: pair.similarity,
+          distance_km: pair.distance_km,
+          risk_indicator: pair.risk_indicator,
+          reasons: pair.reasons
+        };
+
+        const existingP2 = this.mlDuplicateCandidates.get(p2Id) || [];
+        existingP2.push(matchForP2);
+        this.mlDuplicateCandidates.set(p2Id, existingP2);
+      }
+    }
+
+    // Re-evaluate projects with ML signals incorporated
+    for (const p of this.projects) {
+      const feat = this.featuresMap.get(p.project_id)!;
+      const mlRes = this.mlAnomalyMap.get(p.project_id);
+      const mlDups = this.mlDuplicateCandidates.get(p.project_id);
+
+      const analysis = RiskScoringService.evaluateProject(
+        p,
+        feat,
+        this.projects,
+        this.featuresMap,
+        this.agencyProfiles,
+        mlRes,
+        mlDups
+      );
+
+      this.riskAnalyses.set(p.project_id, analysis);
+
+      const enriched: EnrichedProject = {
+        ...p,
+        risk_score: analysis.risk_score,
+        risk_level: analysis.risk_level,
+        primary_reason: analysis.primary_reason,
+        risk_breakdown: analysis.risk_breakdown,
+        evidences: analysis.evidences,
+        peer_benchmark: analysis.peer_benchmark,
+        duplicate_candidates: analysis.duplicate_candidates,
+        ml_anomaly_score: analysis.ml_anomaly_score,
+        ml_anomaly_percentile: analysis.ml_anomaly_percentile,
+        is_ml_anomaly: analysis.is_ml_anomaly,
+        ml_unusual_characteristics: analysis.ml_unusual_characteristics,
+        ml_status: analysis.ml_status
+      };
+
+      this.enrichedProjects.set(p.project_id, enriched);
+    }
   }
 
   public static runFullAnalysis(): void {
@@ -103,18 +242,23 @@ export class StorageService {
       preliminaryHighRisk
     );
 
-    // 6. Final Risk Scoring & Enrichment
+    // 6. Final Risk Scoring & Enrichment (Deterministic pass)
     this.enrichedProjects.clear();
     this.riskAnalyses.clear();
 
     for (const p of this.projects) {
       const feat = this.featuresMap.get(p.project_id)!;
+      const mlRes = this.mlAnomalyMap.get(p.project_id);
+      const mlDups = this.mlDuplicateCandidates.get(p.project_id);
+
       const analysis = RiskScoringService.evaluateProject(
         p,
         feat,
         this.projects,
         this.featuresMap,
-        this.agencyProfiles
+        this.agencyProfiles,
+        mlRes,
+        mlDups
       );
 
       this.riskAnalyses.set(p.project_id, analysis);
@@ -127,7 +271,12 @@ export class StorageService {
         risk_breakdown: analysis.risk_breakdown,
         evidences: analysis.evidences,
         peer_benchmark: analysis.peer_benchmark,
-        duplicate_candidates: analysis.duplicate_candidates
+        duplicate_candidates: analysis.duplicate_candidates,
+        ml_anomaly_score: analysis.ml_anomaly_score,
+        ml_anomaly_percentile: analysis.ml_anomaly_percentile,
+        is_ml_anomaly: analysis.is_ml_anomaly,
+        ml_unusual_characteristics: analysis.ml_unusual_characteristics,
+        ml_status: analysis.ml_status
       };
 
       this.enrichedProjects.set(p.project_id, enriched);
@@ -178,21 +327,23 @@ export class StorageService {
     const seenPairs = new Set<string>();
 
     for (const p of this.enrichedProjects.values()) {
-      for (const match of p.duplicate_candidates) {
-        const pairKey = [p.project_id, match.matched_project_id].sort().join(':::');
-        if (seenPairs.has(pairKey)) continue;
-        seenPairs.add(pairKey);
-
-        const other = this.enrichedProjects.get(match.matched_project_id);
-        if (other) {
-          pairs.push({
-            projectA: p,
-            projectB: other,
-            similarity: match.semantic_similarity,
-            distance_km: match.distance_km,
-            risk_level: match.risk_indicator === 'Potential Duplicate' ? 'CRITICAL' : 'HIGH',
-            reasons: match.reasons
-          });
+      if (p.duplicate_candidates && p.duplicate_candidates.length > 0) {
+        for (const match of p.duplicate_candidates) {
+          const other = this.enrichedProjects.get(match.matched_project_id);
+          if (other) {
+            const pairKey = [p.project_id, other.project_id].sort().join(':::');
+            if (!seenPairs.has(pairKey)) {
+              seenPairs.add(pairKey);
+              pairs.push({
+                projectA: p,
+                projectB: other,
+                similarity: match.semantic_similarity,
+                distance_km: match.distance_km,
+                risk_level: match.semantic_similarity >= 75 ? 'CRITICAL' : 'HIGH',
+                reasons: match.reasons
+              });
+            }
+          }
         }
       }
     }
@@ -213,8 +364,9 @@ export class StorageService {
     let progressMismatchCount = 0;
     let financialAnomalyCount = 0;
     let duplicateCandidatesCount = 0;
+    let mlAnomaliesCount = 0;
 
-    // Actual Data Quality Counters (No hardcoded metrics)
+    // Actual Data Quality Counters
     let missingCoords = 0;
     let missingCompletion = 0;
     let missingRequiredFields = 0;
@@ -235,7 +387,8 @@ export class StorageService {
       if (p.risk_breakdown.delay_risk >= 10) delayCount++;
       if (p.risk_breakdown.progress_mismatch_risk >= 10) progressMismatchCount++;
       if (p.risk_breakdown.financial_risk >= 10) financialAnomalyCount++;
-      if (p.duplicate_candidates.length > 0) duplicateCandidatesCount++;
+      if (p.duplicate_candidates && p.duplicate_candidates.length > 0) duplicateCandidatesCount++;
+      if (p.is_ml_anomaly) mlAnomaliesCount++;
 
       // Check 1: Coordinates validity
       const hasCoords = Boolean(
@@ -284,7 +437,6 @@ export class StorageService {
       );
       if (hasValidTimeline) totalChecksPassed++;
 
-      // An invalid record fails critical required fields, finances, or coordinates
       if (!hasCoords || !hasCompletionDate || !hasIdentity || !hasClassification || !hasValidFinances || !hasValidTimeline) {
         invalidRecords++;
       }
@@ -318,6 +470,16 @@ export class StorageService {
         missing_required_fields_count: missingRequiredFields,
         data_integrity_score_pct: dataIntegrityPct,
         last_analyzed_at: this.lastAnalyzedAt
+      },
+      ml_engine: {
+        isolation_forest_status: this.isMLActive ? 'Active' : 'Fallback',
+        sentence_transformers_status: this.isMLActive ? 'Active' : 'Fallback',
+        peer_benchmarking_status: 'Active',
+        rule_engine_status: 'Active',
+        model_version: '0.2.0-HYBRID',
+        training_records: total,
+        ml_anomalies_count: mlAnomaliesCount,
+        duplicate_candidates_count: duplicateCandidatesCount
       }
     };
   }
@@ -329,10 +491,17 @@ export class StorageService {
       this.projects = newProjects;
     }
     this.runFullAnalysis();
+    this.triggerMLAnalysis().catch(() => {});
+  }
+
+  public static reAnalyze(): void {
+    this.runFullAnalysis();
+    this.triggerMLAnalysis().catch(() => {});
   }
 
   public static resetToDemo(): void {
     this.projects = generateSyntheticProjects();
     this.runFullAnalysis();
+    this.triggerMLAnalysis().catch(() => {});
   }
 }

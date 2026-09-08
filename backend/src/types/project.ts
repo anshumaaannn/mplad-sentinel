@@ -61,7 +61,8 @@ export interface RiskBreakdown {
 }
 
 export interface AnomalyEvidence {
-  anomaly_type: 'Financial Anomaly' | 'Delay Anomaly' | 'Progress Mismatch' | 'Duplicate Candidate' | 'Geospatial Anomaly' | 'Agency Behavioral Pattern';
+  id?: string;
+  anomaly_type: 'Financial Anomaly' | 'Delay Anomaly' | 'Progress Mismatch' | 'Duplicate Candidate' | 'Geospatial Anomaly' | 'Agency Behavioral Pattern' | 'ML Anomaly Signal' | string;
   severity: 'LOW' | 'MODERATE' | 'HIGH' | 'CRITICAL';
   metric: string;
   observed_value: string | number;
@@ -101,6 +102,13 @@ export interface DuplicateMatch {
   reasons: string[];
 }
 
+export interface MLUnusualCharacteristic {
+  metric: string;
+  observed: string;
+  deviation: string;
+  description: string;
+}
+
 export interface ProjectRiskAnalysis {
   project_id: string;
   risk_score: number; // 0 - 100
@@ -112,6 +120,12 @@ export interface ProjectRiskAnalysis {
   duplicate_candidates: DuplicateMatch[];
   features: Record<string, number | string>;
   analyzed_at: string;
+  // ML signals
+  ml_anomaly_score?: number;
+  ml_anomaly_percentile?: number;
+  is_ml_anomaly?: boolean;
+  ml_unusual_characteristics?: MLUnusualCharacteristic[];
+  ml_status?: 'ACTIVE' | 'FALLBACK';
 }
 
 export interface EnrichedProject extends Project {
@@ -122,4 +136,10 @@ export interface EnrichedProject extends Project {
   evidences: AnomalyEvidence[];
   peer_benchmark: PeerBenchmark;
   duplicate_candidates: DuplicateMatch[];
+  // ML signals
+  ml_anomaly_score?: number;
+  ml_anomaly_percentile?: number;
+  is_ml_anomaly?: boolean;
+  ml_unusual_characteristics?: MLUnusualCharacteristic[];
+  ml_status?: 'ACTIVE' | 'FALLBACK';
 }
