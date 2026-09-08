@@ -1,12 +1,12 @@
 services:
   - type: web
     name: mplad-sentinel
-    env: node
+    env: docker
+    dockerfilePath: ./Dockerfile
     plan: free
-    buildCommand: npm install && npm run build
-    startCommand: node backend/dist/index.js
+    region: oregon
     envVars:
       - key: NODE_ENV
         value: production
       - key: PORT
-        value: 10000
+        value: 5000
