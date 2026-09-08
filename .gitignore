@@ -24,6 +24,7 @@ build/
 
 # IDEs and Editors
 .idea/
+*.iml
 .vscode/
 *.suo
 *.ntvs*

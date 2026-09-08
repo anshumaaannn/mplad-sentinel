@@ -13,6 +13,7 @@ export interface EngineeredFeatures {
   progress_efficiency: number;
   is_completed: boolean;
   is_stalled: boolean;
+  project_age_days: number;
 }
 
 export class FeatureEngineeringService {
@@ -50,6 +51,8 @@ export class FeatureEngineeringService {
     const delay_days = Math.max(0, Math.round((endDate.getTime() - expectedEndDate.getTime()) / (1000 * 60 * 60 * 24)));
     const is_delayed = delay_days > 30;
 
+    const project_age_days = Math.max(1, this.calculateDaysBetween(project.sanction_date || project.start_date, endDate));
+
     const qty = Math.max(0.1, project.quantity || 1);
     const unit_cost = expenditure / qty;
 
@@ -67,7 +70,8 @@ export class FeatureEngineeringService {
       unit_cost,
       progress_efficiency,
       is_completed: project.status === 'Completed',
-      is_stalled: project.status === 'Stalled' || (project.status === 'In Progress' && delay_days > 180 && progress < 50)
+      is_stalled: project.status === 'Stalled' || (project.status === 'In Progress' && delay_days > 180 && progress < 50),
+      project_age_days
     };
   }
 

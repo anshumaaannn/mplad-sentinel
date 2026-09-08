@@ -88,6 +88,10 @@ export interface PeerBenchmark {
   duration_deviation_pct: number;
   unit_cost_observed?: number;
   unit_cost_peer_median?: number;
+  peer_progress_median?: number;
+  peer_progress_deviation?: number;
+  peer_cost_ratio?: number;
+  peer_duration_ratio?: number;
 }
 
 export interface DuplicateMatch {

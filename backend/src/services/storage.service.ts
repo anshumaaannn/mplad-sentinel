@@ -10,7 +10,7 @@ import { FeatureEngineeringService, EngineeredFeatures } from './featureEngineer
 import { PeerBenchmarkingService, PeerGroupStats } from './peerBenchmarking.service.js';
 import { AgencyAnalyticsService, AgencyMetrics } from './agencyAnalytics.service.js';
 import { RiskScoringService } from './riskScoring.service.js';
-import { MLClientService, MLAnomalyResult, MLBatchResponse } from './mlClient.service.js';
+import { MLClientService, MLAnomalyResult, MLBatchResponse, EnrichedMLProjectPayload } from './mlClient.service.js';
 import fs from 'fs';
 import path from 'path';
 
@@ -105,7 +105,32 @@ export class StorageService {
 
   public static async triggerMLAnalysis(): Promise<void> {
     try {
-      const mlResponse = await MLClientService.analyzeProjects(this.projects);
+      const payload: EnrichedMLProjectPayload[] = this.projects.map(p => {
+        const feat = this.featuresMap.get(p.project_id) || FeatureEngineeringService.extractFeatures(p);
+        const benchmark = this.enrichedProjects.get(p.project_id)?.peer_benchmark
+          || PeerBenchmarkingService.getBenchmarkForProject(p, feat, this.projects, this.featuresMap);
+        const mlFeatures = MLClientService.transformToMLFeatures(p, feat, benchmark);
+
+        return {
+          ...p,
+          features: feat,
+          peer_benchmark: benchmark,
+          ml_features: mlFeatures,
+          delay_days: mlFeatures.delay_days,
+          execution_duration_days: mlFeatures.execution_duration_days,
+          project_age_days: mlFeatures.project_age_days,
+          peer_cost_deviation: mlFeatures.peer_cost_deviation,
+          peer_duration_deviation: mlFeatures.peer_duration_deviation,
+          peer_progress_deviation: mlFeatures.peer_progress_deviation,
+          peer_cost_ratio: mlFeatures.peer_cost_ratio,
+          peer_duration_ratio: mlFeatures.peer_duration_ratio,
+          expenditure_ratio: mlFeatures.expenditure_ratio,
+          cost_overrun_ratio: mlFeatures.cost_overrun_ratio,
+          expenditure_progress_gap: mlFeatures.expenditure_progress_gap
+        };
+      });
+
+      const mlResponse = await MLClientService.analyzeProjects(payload);
       if (mlResponse && mlResponse.success) {
         this.isMLActive = true;
         this.applyMLResults(mlResponse);

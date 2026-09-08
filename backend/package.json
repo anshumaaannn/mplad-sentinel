@@ -8,7 +8,8 @@
     "dev": "tsx watch src/index.ts",
     "start": "tsx src/index.ts",
     "build": "tsc",
-    "test": "tsx src/tests/riskEngine.test.ts"
+    "test": "tsx src/tests/riskEngine.test.ts && tsx src/tests/featurePipeline.test.ts",
+    "test:ml": "tsx src/tests/mlIntegration.test.ts"
   },
   "dependencies": {
     "cors": "^2.8.6",

@@ -165,11 +165,13 @@ export class PeerBenchmarkingService {
       }
       return 180;
     });
+    const progresses = selectedPeers.map(p => Number(p.physical_progress_percentage) || 0);
 
     const medianCost = this.calculateMedian(costs) || projectCost;
     const meanCost = this.calculateMean(costs) || projectCost;
     const stdCost = this.calculateStdDev(costs, meanCost);
     const medianDuration = this.calculateMedian(durations) || 180;
+    const medianProgress = this.calculateMedian(progresses);
 
     const percentile = this.calculatePercentile(costs, projectCost);
     const deviationPct = medianCost > 0
@@ -179,6 +181,10 @@ export class PeerBenchmarkingService {
     const durationDeviationPct = medianDuration > 0
       ? Math.round(((features.actual_execution_days - medianDuration) / medianDuration) * 100)
       : 0;
+
+    const peerCostRatio = medianCost > 0 ? Number((projectCost / medianCost).toFixed(4)) : 1.0;
+    const peerDurationRatio = medianDuration > 0 ? Number(((features.actual_execution_days || 180) / medianDuration).toFixed(4)) : 1.0;
+    const peerProgressDev = Number((project.physical_progress_percentage - medianProgress).toFixed(1));
 
     return {
       peer_group_name: `${project.sector} • ${project.work_type}`,
@@ -192,7 +198,11 @@ export class PeerBenchmarkingService {
       cost_percentile: percentile,
       cost_deviation_pct: deviationPct,
       deviation_from_peer: deviationPct,
-      duration_deviation_pct: durationDeviationPct
+      duration_deviation_pct: durationDeviationPct,
+      peer_progress_median: medianProgress,
+      peer_progress_deviation: peerProgressDev,
+      peer_cost_ratio: peerCostRatio,
+      peer_duration_ratio: peerDurationRatio
     };
   }
 }
